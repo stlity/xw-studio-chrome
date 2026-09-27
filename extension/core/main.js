@@ -1860,12 +1860,27 @@
       // NOT declare the session ready - abort quietly so "Start" stays available.
       if (A.stop || startRes.kind === "stopped") { diag("start.aborted", { kind: startRes.kind }); return; }
 
+      // Claude can occasionally answer the bootstrap as a normal help question.
+      // Do not mark that as a ready agent: send one concise recovery turn that
+      // explicitly requires the first executable XW command.
+      let handshakeRes = startRes;
+      const isCommandHandshake = (r) => {
+        const n = r && r.calls && r.calls[0] && r.calls[0].tool;
+        return r && r.kind === "tool" && r.calls.length === 1 &&
+          (n === "list_commands" || n === "list_tools");
+      };
+      if (!isCommandHandshake(handshakeRes)) {
+        const recovery = "XW STARTUP RECOVERY: your previous reply did not execute the required startup command. Do not explain, do not ask the user to paste code, and do not describe manual Roblox steps. Send exactly one fenced JSON command now:\n```json\n{\"command\":\"list_commands\"}\n```\nThen wait for its result and reply only that you are ready.";
+        const recoveryBase = await submitAndGetBase(recovery);
+        handshakeRes = await waitForResponse(recoveryBase);
+      }
+
       // If the model calls list_commands as instructed, run it and wait for the "ready" reply.
-      const firstName = startRes.calls && startRes.calls[0] && startRes.calls[0].tool;
-      if (startRes.kind === "tool" && startRes.calls && startRes.calls.length === 1 &&
+      const firstName = handshakeRes.calls && handshakeRes.calls[0] && handshakeRes.calls[0].tool;
+      if (handshakeRes.kind === "tool" && handshakeRes.calls && handshakeRes.calls.length === 1 &&
           (firstName === "list_commands" || firstName === "list_tools")) {
-        decorate.toolBox(startRes.item, "Loading commands", "run", "", true);
-        const toolFeedback = await runTool(startRes.calls[0]);
+        decorate.toolBox(handshakeRes.item, "Loading commands", "run", "", true);
+        const toolFeedback = await runTool(handshakeRes.calls[0]);
         // Roblox down short-circuits list_commands into a plain "offline" note
         // (main.js, list_commands handler) instead of the real catalogue - detect
         // that and show it as such, rather than the STALE cached tool count below

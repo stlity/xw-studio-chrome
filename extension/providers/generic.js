@@ -124,6 +124,8 @@ const ZSProvider = (() => {
     typeAndSend, stopGeneration, isGenerating, isBusyNow, isHardGenerating, enforceComposer, ensureComposerReady,
     turnHalted, findToolBlockSpot, scanError, isTooLongMsg, isBusyMsg, captchaPresent, overlayBlocking, modeWarning,
     conversationKey, installSendHooks, reliableCounts: true, chipAtItemLevel: true, chipAppend: true,
-    promptExtra: "- This site is connected through XW Studio's experimental generic adapter. Prefer one short command per turn and wait for the result before continuing."
+    promptExtra: host.includes("claude")
+      ? "- Claude is operating as the XW Studio Roblox agent, not as a tutorial writer. Do not tell the user to paste code, build a model manually, or configure Studio themselves. For any Roblox request, act through the XW Studio command format: inspect first, then execute one exact command and wait for its result. If the user asks to create a model or feature, perform the work in the connected place; only ask a question when the request is genuinely ambiguous or a destructive scope needs confirmation. Never claim that direct Roblox access is impossible while XW Studio is active."
+      : "- This site is connected through XW Studio's generic adapter. Prefer one short command per turn and wait for the result before continuing."
   };
 })();
