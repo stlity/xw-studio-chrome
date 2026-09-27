@@ -71,9 +71,36 @@ const ZSProvider = (() => {
   const conversationKey = () => location.href;
   const chatIsEmpty = () => allItems().length === 0;
   const isFreshChat = () => chatIsEmpty() && !!editor();
+  let cachedEditor = null;
+  let cachedSurface = null;
+  function composerSurface() {
+    const e = editor();
+    if (!e) return null;
+    if (e === cachedEditor && cachedSurface?.isConnected) return cachedSurface;
+    let node = e.parentElement;
+    const fallback = node;
+    for (let depth = 0; node && node !== document.body && depth < 8; depth++, node = node.parentElement) {
+      const rect = node.getBoundingClientRect();
+      const hasSend = [...node.querySelectorAll(SEND)].some((b) => !b.closest("#zs-root") && visible(b));
+      if (hasSend && rect.width >= 280) {
+        cachedEditor = e;
+        cachedSurface = node;
+        return node;
+      }
+    }
+    cachedEditor = e;
+    cachedSurface = fallback;
+    return fallback;
+  }
   const composerFrame = () => editor()?.parentElement || null;
-  const barMount = () => { const e = editor(); const p = e?.parentElement; return p ? { parent: p, before: p.firstElementChild, inside: true } : null; };
-  const barAnchor = () => editor()?.parentElement || null;
+  function barMount() {
+    const surface = composerSurface();
+    if (!surface) return null;
+    let before = surface.firstElementChild;
+    if (before?.id === "zs-bar") before = before.nextElementSibling;
+    return { parent: surface, before, inside: true };
+  }
+  const barAnchor = () => composerSurface();
   const ensureComposerReady = () => ({ ready: !!editor() });
   const enforceComposer = () => { if (locked) setInputLock(true); return { ready: !!editor() }; };
   const installSendHooks = () => {};

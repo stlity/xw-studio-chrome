@@ -68,8 +68,7 @@ All notable changes to XW Studio Free are documented here.
   while the model is still writing, then settles red as "wrong format".
 - **ChatGPT: the XW Studio bar no longer collides with the composer's rounded
   corners.** The composer card is rounded by 28px and the bar sits flush against
-  its top edge, so the Discord button's corner fell outside the rounded shape and
-  was sliced off by the card. Both ends of the bar are inset to clear the curve.
+  its top edge. Both ends of the bar are inset to clear the curve.
 
 ## [1.5.2] - 2026-08-14
 

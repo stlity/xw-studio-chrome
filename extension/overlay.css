@@ -125,7 +125,6 @@ html.zs-light #zs-bar.zs-bar-anchored {
   width: auto;
   /* The card's corner radius is 28px and the bar sits flush with its top edge,
      so the bar's outermost children land inside the corner arc. With the
-     generic 16px padding the Discord button ended up 8px from the card edge and
      7.3px from its top - its top-right corner falls OUTSIDE the rounded rect and
      was being sliced off by the card's `overflow-clip` (measured live). 24px
      puts both ends 16px in from the card edge, which clears the arc with room to
@@ -144,7 +143,6 @@ html.zs-light #zs-bar.zs-bar-anchored {
 
 /* Meta AI's composer card has a large corner radius (rounded-32 = 32px), so the
    full-width anchored bar's left/right ends run under the curve - the brand and
-   the Discord/switch/support icons crowd the rounding. Inset the content by ~the
    radius so both edges clear the corners cleanly. */
 #zs-bar.zs-bar-anchored.zs-prov-meta { padding-left: 30px; padding-right: 30px; }
 
@@ -257,17 +255,6 @@ html.zs-light #zs-unstable {
 }
 #zs-stop[data-state="stopping"]:hover { background: #b45309; }
 
-/* bar controls: one neutral icon-button family (Discord, support, switch) */
-#zs-discord, #zs-support {
-  flex: none; width: 28px; height: 28px; padding: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255, 255, 255, 0.06); color: #b8b8bf;
-  border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px;
-  cursor: pointer; text-decoration: none;
-  transition: background 0.14s ease, color 0.14s ease;
-}
-#zs-discord:hover, #zs-support:hover { background: rgba(255, 255, 255, 0.11); color: #ededf0; }
-
 /* model switcher: names the current AI and opens the panel at Switch AI */
 #zs-switch {
   flex: none; display: flex; align-items: center; gap: 5px;
@@ -368,7 +355,6 @@ button.zs-site-opt:hover .zs-site-go { opacity: 1; transform: translateX(0); }
 #zs-set-save:hover, #zs-mcp-add:hover { background: rgba(255, 255, 255, 0.15); }
 #zs-set-status, #zs-mcp-status { font-size: 11px; color: #8a8a92; font-weight: 500; }
 
-/* support actions: neutral rows, differentiated by the aside text, not colour */
 .zs-tip-opt {
   width: 100%; margin: 5px 0; padding: 9px 11px;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -950,14 +936,10 @@ html.zs-light #zs-state { color: #4b5563; }
 html.zs-light #zs-state b { color: #4f46e5; }
 html.zs-light #zs-state.zs-state-warn { color: #b91c1c; }
 html.zs-light #zs-bar.tone-active #zs-state b { color: #059669; }
-html.zs-light #zs-discord,
-html.zs-light #zs-support,
 html.zs-light #zs-switch {
   background: rgba(0, 0, 0, 0.05); color: #4b5563;
   border-color: rgba(0, 0, 0, 0.12);
 }
-html.zs-light #zs-discord:hover,
-html.zs-light #zs-support:hover,
 html.zs-light #zs-switch:hover { background: rgba(0, 0, 0, 0.09); color: #1f2430; }
 html.zs-light #zs-action:disabled {
   background: rgba(0, 0, 0, 0.05); color: rgba(0, 0, 0, 0.35); border-color: rgba(0, 0, 0, 0.08);
@@ -1064,13 +1046,6 @@ html:not(.zs-light) {
 }
 #zs-action[data-kind="start"]:hover { filter: brightness(1.08); }
 #zs-stop { background: var(--xw-error) !important; border-radius: 20px !important; min-height: 40px; padding-inline: 18px; }
-#zs-switch, #zs-discord, #zs-support {
-  background: transparent !important;
-  color: var(--xw-on-surface) !important;
-  border-color: var(--xw-outline) !important;
-  border-radius: 14px !important;
-}
-#zs-switch:hover, #zs-discord:hover, #zs-support:hover { background: color-mix(in srgb, var(--xw-primary) 12%, transparent) !important; }
 #zs-menu {
   background: var(--xw-surface) !important;
   color: var(--xw-on-surface) !important;
@@ -1122,9 +1097,7 @@ html:not(.zs-light) #zs-root {
   box-shadow: none !important; cursor: not-allowed !important; opacity: .72;
 }
 #zs-stop { border-radius: 999px !important; }
-#zs-switch, #zs-discord, #zs-support, .zs-tip-opt, .zs-site-opt, #zs-set-text, .zs-mcp-field,
 #zs-setup-dismiss, .zs-banner-x { border-radius: 16px !important; background: color-mix(in srgb, var(--xw-surface) 70%, transparent) !important; color: var(--xw-on-surface) !important; border-color: color-mix(in srgb, var(--xw-outline) 55%, transparent) !important; }
-#zs-switch:hover, #zs-discord:hover, #zs-support:hover, .zs-tip-opt:hover, .zs-site-opt:hover,
 #zs-setup-dismiss:hover, .zs-banner-x:hover { background: color-mix(in srgb, var(--xw-primary) 14%, var(--xw-surface)) !important; }
 .zs-menu-logo, #zs-setup-logo, .zs-sec-label span { color: var(--xw-primary) !important; }
 #zs-dot.on, .zs-live-dot, .zs-mcp-health-on { background: var(--xw-primary) !important; box-shadow: 0 0 8px color-mix(in srgb, var(--xw-primary) 70%, transparent) !important; }
@@ -1144,3 +1117,12 @@ html:not(.zs-light) #zs-root {
 .zs-banner.warn { border-left-color: var(--xw-warning) !important; }
 #zs-input-cover { background: var(--xw-surface-container) !important; color: color-mix(in srgb, var(--xw-on-surface) 65%, transparent) !important; }
 @media (prefers-reduced-motion: reduce) { #zs-root *, #zs-root *::before, #zs-root *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+
+/* Unified composer integration: pull the status row slightly upward so it joins
+   the host chat card instead of looking like a detached pill. Applies to every
+   provider using an in-flow composer mount, including Mistral's generic adapter. */
+#zs-bar.zs-bar-inline.zs-bar-inside {
+  margin: -5px 0 2px !important;
+  padding-top: 3px !important;
+  padding-bottom: 8px !important;
+}
