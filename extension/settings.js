@@ -4,7 +4,7 @@
   const AI = [
     ["DeepSeek", "chat.deepseek.com"], ["ChatGPT", "chatgpt.com"], ["Gemini", "gemini.google.com"],
     ["Kimi", "kimi.ai"], ["GLM", "chat.z.ai"], ["Qwen", "chat.qwen.ai"], ["Arena", "arena.ai"],
-    ["Microsoft Copilot", "copilot.microsoft.com"], ["HuggingChat", "huggingface.co/chat"], ["Mistral Vibe", "chat.mistral.ai"], ["Meta AI", "meta.ai"], ["Local / other MCP", "local"]
+    ["Microsoft Copilot", "copilot.microsoft.com"], ["HuggingChat", "huggingface.co/chat"], ["Mistral Vibe", "chat.mistral.ai"], ["Claude", "claude.ai"], ["Grok", "grok.com"], ["Perplexity", "perplexity.ai"], ["Duck.ai", "duck.ai"], ["Meta AI", "meta.ai"], ["Local / other MCP", "local"]
   ];
   const roleDefs = ZS.DEFAULT_AGENT_ROLES;
   const ids = Object.keys(roleDefs);
@@ -49,7 +49,7 @@
   function save() {
     chrome.storage.local.set({ xwMultiAgentConfig: config }, () => {
       $("save-state").textContent = "Сохранено"; $("toast").textContent = "Настройки применены ✓";
-      chrome.tabs.query({}, (tabs) => tabs.forEach((tab) => { try { chrome.tabs.sendMessage(tab.id, { type: "xw-agent-config", config }); } catch {} }));
+      chrome.tabs.query({}, (tabs) => tabs.forEach((tab) => { try { Promise.resolve(chrome.tabs.sendMessage(tab.id, { type: "xw-agent-config", config })).catch(() => {}); } catch {} }));
       setTimeout(() => { $("toast").textContent = ""; }, 1800);
     });
   }

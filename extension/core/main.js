@@ -1904,8 +1904,10 @@
           // connected server merged - Roblox + Blender + addons) overstated the boot
           // count and made it look like all servers were loaded at once. Count the
           // Roblox-scoped tools instead, matching the real result.
-          const robloxCount = A.toolList.filter((t) => (t.server || "roblox") === "roblox").length;
-          decorate.toolBox(startRes.item, "Loading commands", "done", `${robloxCount} commands`, true);
+          const commandCount = A.bridge.mode === "terminal"
+            ? A.toolList.length
+            : A.toolList.filter((t) => (t.server || "roblox") === "roblox").length;
+          decorate.toolBox(startRes.item, "Loading commands", "done", `${commandCount} commands`, true);
         }
         const base2 = await submitAndGetBase(toolFeedback);
         const readyRes = await waitForResponse(base2); // wait for "I'm ready" reply

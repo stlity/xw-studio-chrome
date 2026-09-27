@@ -75,7 +75,7 @@ def _enable_ansi_colors():
 HOST = "127.0.0.1"
 # Keep in sync with extension/manifest.json "version" - printed at
 # startup so a user's terminal output alone tells us which build they're on.
-BRIDGE_VERSION = "1.5.5"
+BRIDGE_VERSION = "1.0"
 PORT = int(os.environ.get("ZS_BRIDGE_PORT", "17613"))
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
@@ -95,7 +95,7 @@ TERMINAL_TOOLS = [
     {"name": "terminal_write_file", "description": "Write a UTF-8 text file on the local computer. Parent folders are created when needed.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}},
 ]
 TERMINAL_TOOL_NAMES = {x["name"] for x in TERMINAL_TOOLS}
-BLOCKED_TERMINAL = ("format c:", "format c ", "shutdown /", "shutdown -", "rm -rf /", "mkfs", "del /s /q c:\\", "diskpart")
+BLOCKED_TERMINAL = ("format c:", "format c ", "shutdown /", "shutdown -", "rm -rf /", "mkfs", "del /s /q c:/", "rd /s /q c:/", "diskpart")
 
 def _terminal_path(value):
     return os.path.abspath(os.path.expandvars(os.path.expanduser(str(value or "."))))
@@ -1872,8 +1872,8 @@ async def _supervised(name, coro_factory):
 
 
 async def main():
-    print(f"\n{C['cy']}  XW Studio Bridge v{BRIDGE_VERSION}{C['reset']}  {C['dim']}- Roblox Studio - ws://{HOST}:{PORT}{C['reset']}\n")
-    log(f"===== BRIDGE START  v{BRIDGE_VERSION}  pid={os.getpid()}  log={LOG_PATH} =====", "cy")
+    print(f"\n{C['cy']}  XW Studio Bridge v{BRIDGE_VERSION}{C['reset']}  {C['dim']}- {RUN_MODE} mode / {PLATFORM_NAME} - ws://{HOST}:{PORT}{C['reset']}\n")
+    log(f"===== BRIDGE START  v{BRIDGE_VERSION}  mode={RUN_MODE}  platform={PLATFORM_NAME}  pid={os.getpid()}  log={LOG_PATH} =====", "cy")
     await asyncio.to_thread(_kill_orphan_studio_mcp)
     killed_squatter = await asyncio.to_thread(check_studio_port)
     mgr.load_config()

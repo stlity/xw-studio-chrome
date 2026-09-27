@@ -10,7 +10,7 @@ Click **Settings** in the extension popup to open a dedicated tab. Enable the te
 
 The current release provides role-aware orchestration instructions and safe planning in the active chat. It does not silently open or control several AI tabs at once; cross-tab execution remains a later stage so each external site keeps its own login and consent boundary.
 
-Eight AI providers are supported: **DeepSeek** (chat.deepseek.com, recommended), **ChatGPT** (chatgpt.com), **Google Gemini** (gemini.google.com), **Kimi** (kimi.ai, Moonshot AI), **GLM** (chat.z.ai, Z.ai), **Qwen** (chat.qwen.ai), **Arena** (arena.ai, a multi-model playground) and **Meta AI** (meta.ai). On ChatGPT, screenshots and image input are turned off on purpose: the free tier limits files and images on a separate quota from messages, so vision would only work part of the day. Gemini and Kimi can be unstable: Gemini tends to stop using the Roblox tools in long sessions, and Kimi sometimes uses its own native tools instead of the Roblox commands. On Arena, use **Direct** mode (XW Studio only supports Direct; it blocks Start in Battle / Side-by-Side / Agent modes). DeepSeek is the recommended provider.
+Supported AI providers include **DeepSeek** (recommended), **ChatGPT**, **Google Gemini**, **Kimi**, **GLM**, **Qwen**, **Arena**, **Meta AI**, **Microsoft Copilot**, **HuggingChat**, **Mistral**, **Claude**, **Grok**, **Perplexity** and **Duck.ai**. On ChatGPT, screenshots and image input are turned off on purpose: the free tier limits files and images on a separate quota from messages, so vision would only work part of the day. Gemini and Kimi can be unstable: Gemini tends to stop using the Roblox tools in long sessions, and Kimi sometimes uses its own native tools instead of the Roblox commands. On Arena, use **Direct** mode (XW Studio only supports Direct; it blocks Start in Battle / Side-by-Side / Agent modes). DeepSeek is the recommended provider.
 
 
 > *Also known as: XW Studio Roblox, XW Studio free download, Roblox ChatGPT agent, Roblox DeepSeek agent, Roblox Gemini agent, Roblox Kimi agent, Roblox GLM agent, Roblox Qwen agent, Roblox Arena agent, Roblox Meta AI agent, Roblox Studio AI automation, Luau AI, MCP Roblox, lemonade alternative free, lemonade.gg alternative, free Roblox AI agent, free lemonade roblox alternative*
@@ -24,10 +24,10 @@ If you come across a site or extension using the XW Studio name that asks for pa
 ## How it works
 
 ```
-AI chat (ChatGPT / DeepSeek / Gemini / Kimi / GLM / Qwen / Arena / Meta AI, in your browser) -> XW Studio Extension -> Bridge (your PC) -> Roblox Studio
+AI chat (supported site, in your browser) -> XW Studio Extension -> Bridge (your PC) -> Roblox Studio or Terminal
 ```
 
-The extension runs inside the chat page (ChatGPT, DeepSeek, Gemini, Kimi, GLM, Qwen, Arena or Meta AI). When you type a request, it sends commands to the Bridge running on your PC, which drives Roblox Studio through the built-in MCP server.
+The extension runs inside a supported chat page. In Roblox mode it sends commands to Roblox Studio through the built-in MCP server. In Terminal mode it exposes local file and shell tools through the Bridge.
 
 ## Setup
 
@@ -44,11 +44,7 @@ To load the extension:
 - Click **Load unpacked**
 - Select the `extension` folder from the extracted zip
 
-### 2. Choose a target and start the Bridge
-
-On Windows, run `start.bat` and press **Y** for Roblox Studio or **N** for Terminal. The choice is also available later in the extension popup.
-
-For Roblox mode, continue with the MCP setup below:
+### 2. Configure Roblox Studio (Roblox mode only)
 
 Open Studio and load a Place, then enable MCP (first time only):
 
@@ -59,7 +55,9 @@ Open Studio and load a Place, then enable MCP (first time only):
 
 > Not sure where to find these options? The [video tutorial](https://youtu.be/kPKiZLZ9_Ps) shows exactly where to click.
 
-### 3. Run the Bridge
+### 3. Choose a target and run the Bridge
+
+On Windows, run `start.bat` and press **Y** for Roblox Studio or **N** for Terminal. The choice is also available later in the extension popup.
 
 - **Windows:** double-click `start.bat` inside the extracted folder.
 - **macOS:** double-click `MacOS_Start.command` inside the extracted folder. The first time, macOS will show a security warning ("could not verify... free of malware") - this is normal for any script downloaded outside the App Store, click **Done**, then go to **System Settings > Privacy & Security**, scroll to the bottom, and click **Open Anyway**. You only need to do this once.
@@ -68,9 +66,9 @@ A small window opens, that means the Bridge is running.
 
 ### 4. Start a session
 
-Go to https://chat.deepseek.com (recommended), https://chatgpt.com, https://gemini.google.com, https://www.kimi.ai, https://chat.z.ai, https://chat.qwen.ai, https://arena.ai or https://www.meta.ai and open a new chat. The XW Studio bar appears above the input box. Click **Start session**. Type what you want to build.
+Go to a supported site such as https://chat.deepseek.com (recommended), https://chatgpt.com, https://gemini.google.com, https://www.kimi.ai, https://chat.z.ai, https://chat.qwen.ai, https://arena.ai, https://www.meta.ai, https://claude.ai, https://grok.com, https://www.perplexity.ai or https://duck.ai and open a new chat. The XW Studio bar appears above the input box. Click **Start session**. Type what you want to build or change.
 
-> Only works on chat.deepseek.com, chatgpt.com, gemini.google.com, kimi.ai, chat.z.ai, chat.qwen.ai, arena.ai and meta.ai - it will not work on any other site.
+> It works only on the supported AI sites listed above; it will not inject into arbitrary websites.
 > On Arena, keep the mode dropdown on **Direct** - XW Studio blocks Start in Battle / Side-by-Side / Agent modes (it only drives a single Direct reply).
 > Gemini and Kimi can be unstable (model behavior, not the extension): Gemini may stop using the Roblox tools after a while, and Kimi may use its own native tools instead. If the AI starts answering in plain text instead of acting, remind it to use the commands or start a new session.
 ### 5. Watch the setup tutorial
