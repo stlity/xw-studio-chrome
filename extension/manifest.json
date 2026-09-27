@@ -19,6 +19,7 @@
     "https://copilot.microsoft.com/*",
     "https://huggingface.co/chat/*",
     "https://chat.mistral.ai/*",
+    "https://claude.ai/*",
     "https://www.meta.ai/*",
     "https://meta.ai/*",
     "https://raw.githubusercontent.com/stlity/xw-studio-chrome/*",
@@ -104,7 +105,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://copilot.microsoft.com/*", "https://huggingface.co/chat/*", "https://chat.mistral.ai/*"],
+      "matches": ["https://copilot.microsoft.com/*", "https://huggingface.co/chat/*", "https://chat.mistral.ai/*", "https://claude.ai/*"],
       "js": ["core/config.js", "core/parser.js", "providers/generic.js", "core/main.js"],
       "css": ["overlay.css"],
       "run_at": "document_idle"

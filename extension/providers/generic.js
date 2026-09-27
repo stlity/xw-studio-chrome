@@ -8,7 +8,7 @@ const ZSProvider = (() => {
   let diag = () => {};
   let locked = false;
   const host = location.hostname;
-  const displayName = host.includes("copilot") ? "Microsoft Copilot" : host.includes("mistral") ? "Mistral Vibe" : "HuggingChat";
+  const displayName = host.includes("copilot") ? "Microsoft Copilot" : host.includes("mistral") ? "Mistral Vibe" : host.includes("claude") ? "Claude" : "HuggingChat";
   const timings = { GEN_IDLE_MS: 1400, REASON_IDLE_MS: 8000, WARMUP_MS: 30000, REASON_NOREPLY_MS: 60000, STABLE_MS: 7000, RESPONSE_TIMEOUT_MS: 240000 };
   const TEXT = "textarea:not(#zs-set-text), [contenteditable=\"true\"]:not(#zs-set-text)";
   const SEND = "button[type=submit], button[aria-label*='Send' i], button[aria-label*='send' i], button[data-testid*='send' i], button[class*='send' i]";
@@ -79,18 +79,18 @@ const ZSProvider = (() => {
     if (e === cachedEditor && cachedSurface?.isConnected) return cachedSurface;
     let node = e.parentElement;
     const fallback = node;
+    let candidate = fallback;
     for (let depth = 0; node && node !== document.body && depth < 8; depth++, node = node.parentElement) {
       const rect = node.getBoundingClientRect();
       const hasSend = [...node.querySelectorAll(SEND)].some((b) => !b.closest("#zs-root") && visible(b));
-      if (hasSend && rect.width >= 280) {
-        cachedEditor = e;
-        cachedSurface = node;
-        return node;
-      }
+      // Keep climbing through compact composer wrappers. The outermost compact
+      // card is where the host puts its quick-access row and microphone button;
+      // mounting there places XW Studio above the input, like a native banner.
+      if (hasSend && rect.width >= 280 && rect.height <= 360) candidate = node;
     }
     cachedEditor = e;
-    cachedSurface = fallback;
-    return fallback;
+    cachedSurface = candidate;
+    return candidate;
   }
   const composerFrame = () => editor()?.parentElement || null;
   function barMount() {
@@ -117,7 +117,7 @@ const ZSProvider = (() => {
   const userCount = () => allItems().filter(isUserItem).length;
   const lastAssistantId = () => itemKey(lastAssistant());
   return {
-    id: host.includes("copilot") ? "copilot" : host.includes("mistral") ? "mistral" : "huggingchat", displayName, supportsVision: false, timings,
+    id: host.includes("copilot") ? "copilot" : host.includes("mistral") ? "mistral" : host.includes("claude") ? "claude" : "huggingchat", displayName, supportsVision: false, timings,
     init({ diag: d } = {}) { if (d) diag = d; }, allItems, isUserItem, isAssistantItem, itemText, classifyText,
     assistantCount, userCount, lastAssistant, lastAssistantId, itemKey, readAssistant, streamLen, snapshot,
     getEditor, editorText, chatIsEmpty, isFreshChat, composerFrame, barMount, barAnchor, setInputLock,

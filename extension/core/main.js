@@ -99,6 +99,7 @@
     { name: "Microsoft Copilot", url: "https://copilot.microsoft.com/" },
     { name: "HuggingChat", url: "https://huggingface.co/chat/" },
     { name: "Mistral Vibe", url: "https://chat.mistral.ai/" },
+    { name: "Claude", url: "https://claude.ai/new" },
     { name: "Meta AI", url: "https://www.meta.ai/" },
   ];
 

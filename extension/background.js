@@ -13,7 +13,7 @@ const URL = `ws://127.0.0.1:${PORT}`;
 // Chat sites where a XW Studio provider content script runs. Status pushes go
 // to every tab matching these. Add the new provider's URL pattern here (and in
 // manifest.json content_scripts + host_permissions) when integrating another AI.
-const PROVIDER_URLS = ["https://chat.deepseek.com/*", "https://chatgpt.com/*", "https://chat.openai.com/*", "https://gemini.google.com/*", "https://www.kimi.ai/*", "https://kimi.ai/*", "https://chat.z.ai/*", "https://chat.qwen.ai/*", "https://arena.ai/*", "https://copilot.microsoft.com/*", "https://huggingface.co/chat/*", "https://chat.mistral.ai/*", "https://www.meta.ai/*", "https://meta.ai/*"];
+const PROVIDER_URLS = ["https://chat.deepseek.com/*", "https://chatgpt.com/*", "https://chat.openai.com/*", "https://gemini.google.com/*", "https://www.kimi.ai/*", "https://kimi.ai/*", "https://chat.z.ai/*", "https://chat.qwen.ai/*", "https://arena.ai/*", "https://copilot.microsoft.com/*", "https://huggingface.co/chat/*", "https://chat.mistral.ai/*", "https://claude.ai/*", "https://www.meta.ai/*", "https://meta.ai/*"];
 
 const RECONNECT_MIN = 1000;
 const RECONNECT_MAX = 5000;
