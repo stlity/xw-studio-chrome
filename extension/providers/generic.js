@@ -8,7 +8,8 @@ const ZSProvider = (() => {
   let diag = () => {};
   let locked = false;
   const host = location.hostname;
-  const displayName = host.includes("copilot") ? "Microsoft Copilot" : host.includes("mistral") ? "Mistral Vibe" : host.includes("claude") ? "Claude" : "HuggingChat";
+  const siteId = host.includes("copilot") ? "copilot" : host.includes("mistral") ? "mistral" : host.includes("claude") ? "claude" : host.includes("grok") ? "grok" : host.includes("perplexity") ? "perplexity" : host.includes("duck") ? "duck" : "huggingchat";
+  const displayName = { copilot: "Microsoft Copilot", mistral: "Mistral Vibe", claude: "Claude", grok: "Grok", perplexity: "Perplexity", duck: "Duck.ai", huggingchat: "HuggingChat" }[siteId];
   const timings = { GEN_IDLE_MS: 1400, REASON_IDLE_MS: 8000, WARMUP_MS: 30000, REASON_NOREPLY_MS: 60000, STABLE_MS: 7000, RESPONSE_TIMEOUT_MS: 240000 };
   const TEXT = "textarea:not(#zs-set-text), [contenteditable=\"true\"]:not(#zs-set-text)";
   const SEND = "button[type=submit], button[aria-label*='Send' i], button[aria-label*='send' i], button[data-testid*='send' i], button[class*='send' i]";
@@ -117,15 +118,21 @@ const ZSProvider = (() => {
   const userCount = () => allItems().filter(isUserItem).length;
   const lastAssistantId = () => itemKey(lastAssistant());
   return {
-    id: host.includes("copilot") ? "copilot" : host.includes("mistral") ? "mistral" : host.includes("claude") ? "claude" : "huggingchat", displayName, supportsVision: false, timings,
+    id: siteId, displayName, supportsVision: false, timings,
     init({ diag: d } = {}) { if (d) diag = d; }, allItems, isUserItem, isAssistantItem, itemText, classifyText,
     assistantCount, userCount, lastAssistant, lastAssistantId, itemKey, readAssistant, streamLen, snapshot,
     getEditor, editorText, chatIsEmpty, isFreshChat, composerFrame, barMount, barAnchor, setInputLock,
     typeAndSend, stopGeneration, isGenerating, isBusyNow, isHardGenerating, enforceComposer, ensureComposerReady,
     turnHalted, findToolBlockSpot, scanError, isTooLongMsg, isBusyMsg, captchaPresent, overlayBlocking, modeWarning,
     conversationKey, installSendHooks, reliableCounts: true, chipAtItemLevel: true, chipAppend: true,
-    promptExtra: host.includes("claude")
+    promptExtra: siteId === "claude"
       ? "- Claude is operating as the XW Studio Roblox agent, not as a tutorial writer. Do not tell the user to paste code, build a model manually, or configure Studio themselves. For any Roblox request, act through the XW Studio command format: inspect first, then execute one exact command and wait for its result. If the user asks to create a model or feature, perform the work in the connected place; only ask a question when the request is genuinely ambiguous or a destructive scope needs confirmation. Never claim that direct Roblox access is impossible while XW Studio is active."
-      : "- This site is connected through XW Studio's generic adapter. Prefer one short command per turn and wait for the result before continuing."
+      : siteId === "grok"
+        ? "- Use XW Studio commands for Roblox work, not Grok's native web/X search, connectors, or built-in agents. Never tell the user to paste code manually: inspect the connected place, send one fenced JSON XW command, wait for its result, then continue."
+        : siteId === "perplexity"
+          ? "- Do not turn a Roblox request into a web-search answer. Use the XW Studio command format to inspect and change the connected place; use Perplexity search only when the user explicitly asks for external documentation. One command per reply, then wait for its result."
+          : siteId === "duck"
+            ? "- Treat the selected Duck.ai model as the XW Studio Roblox agent. Do not explain how the user can build or paste code manually. Use one fenced JSON XW command at a time, inspect first, wait for the result, and perform changes in the connected place."
+            : "- This site is connected through XW Studio's generic adapter. Prefer one short command per turn and wait for the result before continuing."
   };
 })();

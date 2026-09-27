@@ -100,6 +100,9 @@
     { name: "HuggingChat", url: "https://huggingface.co/chat/" },
     { name: "Mistral Vibe", url: "https://chat.mistral.ai/" },
     { name: "Claude", url: "https://claude.ai/new" },
+    { name: "Grok", url: "https://grok.com/" },
+    { name: "Perplexity", url: "https://www.perplexity.ai/" },
+    { name: "Duck.ai", url: "https://duck.ai/" },
     { name: "Meta AI", url: "https://www.meta.ai/" },
   ];
 
