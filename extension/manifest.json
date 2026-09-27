@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "XW Studio for Chrome",
-  "version": "1.7.0",
+  "version": "1.0",
   "description": "XW Studio is a green Material 3 AI coding agent for Roblox Studio. Use free AI chats to plan, write and debug Luau through a local bridge.",
   "permissions": ["storage"],
   "options_page": "settings.html",
@@ -21,6 +21,7 @@
     "https://chat.mistral.ai/*",
     "https://www.meta.ai/*",
     "https://meta.ai/*",
+    "https://raw.githubusercontent.com/stlity/xw-studio-chrome/*",
     "http://127.0.0.1/*",
     "ws://127.0.0.1/*"
   ],

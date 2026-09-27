@@ -23,6 +23,35 @@ const HEARTBEAT_MS = 10000;
 // pending requests slowly time out.
 const STALE_SOCKET_MS = 25000;
 const REQUEST_TIMEOUT_DEFAULT = 130000; // a bit above the 120s tool timeout
+const UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/stlity/xw-studio-chrome/master/extension/manifest.json";
+const UPDATE_REPO_URL = "https://github.com/stlity/xw-studio-chrome";
+
+function compareVersions(a, b) {
+  const pa = String(a || "0").split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = String(b || "0").split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+  }
+  return 0;
+}
+
+async function checkForUpdate() {
+  const current = chrome.runtime.getManifest().version;
+  try {
+    const res = await fetch(UPDATE_MANIFEST_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const remote = await res.json();
+    const update = remote && compareVersions(remote.version, current) > 0
+      ? { version: String(remote.version), url: UPDATE_REPO_URL }
+      : null;
+    await chrome.storage.local.set({ xwUpdateAvailable: update });
+    chrome.runtime.sendMessage({ type: "xw-update", update }).catch(() => {});
+    return update;
+  } catch (e) {
+    log("update check skipped", String(e));
+    return null;
+  }
+}
 
 let ws = null;
 let connected = false;
@@ -347,6 +376,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         connect();
         sendResponse({ ok: true });
         break;
+      case "update_status": {
+        const update = await checkForUpdate();
+        sendResponse({ ok: true, update });
+        break;
+      }
       default:
         sendResponse({ ok: false, error: "unknown message" });
     }
@@ -356,6 +390,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // Wake/keepalive hooks.
 chrome.runtime.onStartup.addListener(connect);
-chrome.runtime.onInstalled.addListener(connect);
+chrome.runtime.onStartup.addListener(() => checkForUpdate());
+chrome.runtime.onInstalled.addListener(() => { connect(); checkForUpdate(); });
 
 connect();

@@ -41,8 +41,27 @@ document.getElementById("settings").addEventListener("click", () => {
   chrome.tabs.create({ url: chrome.runtime.getURL("settings.html") });
 });
 
+const updateBox = document.getElementById("update");
+const updateText = document.getElementById("update-text");
+document.getElementById("update-open").addEventListener("click", () => {
+  chrome.tabs.create({ url: "https://github.com/stlity/xw-studio-chrome" });
+});
+function renderUpdate(update) {
+  if (!update || !update.version) return;
+  updateText.textContent = `Версия ${update.version} уже доступна. Скачайте свежую папку extension и перезагрузите расширение.`;
+  updateBox.classList.add("show");
+}
+function checkForUpdate() {
+  chrome.runtime.sendMessage({ type: "update_status" }, (r) => {
+    if (r && r.update) renderUpdate(r.update);
+  });
+}
+
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === "zs-status") render(msg);
+  if (msg && msg.type === "xw-update") renderUpdate(msg.update);
 });
 refresh();
+checkForUpdate();
 setInterval(refresh, 2000);
+setInterval(checkForUpdate, 5 * 60 * 1000);

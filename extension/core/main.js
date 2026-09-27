@@ -79,7 +79,7 @@
   }
 
   // GitHub releases page - where users download the Bridge + start.bat.
-  const GITHUB_URL = "https://github.com/REPLACE_WITH_XW_STUDIO_REPO";
+  const GITHUB_URL = "https://github.com/stlity/xw-studio-chrome";
   // Shown in the panel instead of a static "Free" label, so a user's screenshot
   // alone tells us which build they're on for debugging. Pulled from
   // manifest.json (single source of truth) rather than duplicated here.
