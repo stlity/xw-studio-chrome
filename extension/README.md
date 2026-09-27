@@ -14,7 +14,7 @@ It's a Chrome/Edge browser extension plus a small local bridge that connects the
 5. The extension is now active
 
 **Then set up the Bridge:**
-1. **Download the Bridge** from the [GitHub releases page](https://github.com/sebattfg/XW Studio-Free)
+1. **Download the Bridge** from the [XW Studio repository](https://github.com/stlity/xw-studio-chrome)
 2. **Open Roblox Studio** and load a Place
 3. **Enable the MCP server in Roblox Studio** (first time only): click **Assistant AI** in the top bar, then **...** > **Manage MCP Servers** > **Enable Studio as MCP Server**
 4. **Run the Bridge** - double-click `start.bat` (Windows) or `MacOS_Start.command` (macOS); a small window opens, the Bridge is running. On macOS, the first launch shows a Gatekeeper warning (normal for any downloaded script): click **Done**, then **System Settings > Privacy & Security**, scroll down, and click **Open Anyway**.
