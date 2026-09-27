@@ -1126,3 +1126,6 @@ html:not(.zs-light) #zs-root {
   padding-top: 3px !important;
   padding-bottom: 8px !important;
 }
+#zs-bar.zs-bar-anchored {
+  transform: translateY(-5px) !important;
+}
