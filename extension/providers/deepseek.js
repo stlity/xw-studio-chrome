@@ -136,7 +136,7 @@ const ZSProvider = (() => {
   const assistantItems = () => allItems().filter(isAssistantItem);
   const assistantCount = () => assistantItems().length;
   const userCount = () => allItems().filter(isUserItem).length;
-  // Scope to the SITE's composer only: never match ZeroScript's own injected
+  // Scope to the SITE's composer only: never match XW Studio's own injected
   // UI (e.g. the settings textarea #zs-set-text in #zs-root). Otherwise on the
   // login/OAuth pages - which have no site textarea - getEditor() would return
   // our own panel's textarea, defeating the "not on a chat page" guard in the
@@ -149,7 +149,7 @@ const ZSProvider = (() => {
     // Prefer the bottom composer over the inline message-EDIT box. When the user
     // edits a turn, DeepSeek mounts a bordered .ds-textarea up in the turn list;
     // it precedes the composer in DOM order, so the old "first textarea" pick
-    // returned it - and barMount() then dragged the whole ZeroScript bar INTO the
+    // returned it - and barMount() then dragged the whole XW Studio bar INTO the
     // editor. Skip any textarea inside that DS component; the composer isn't one.
     return site.find((e) => !e.closest(S.msgEditBox)) || site[0] || null;
   };
@@ -371,7 +371,7 @@ const ZSProvider = (() => {
     // We only DRIVE the composer when given a reason (i.e. at session startup).
     // Per-sweep calls pass no reason and are READ-ONLY: that leaves the user free
     // to switch the model tab afterwards (e.g. Expert → Instant to turn thinking
-    // off) without ZeroScript reverting their choice every frame.
+    // off) without XW Studio reverting their choice every frame.
     if (!reason) return composerModeState();
     try {
       // Pick the most powerful model for the agent: Expert (deep reasoning). In
@@ -670,7 +670,7 @@ const ZSProvider = (() => {
     if (!text || text.length <= SEND_MAX) return text;
     const omitted = text.length - SEND_MAX;
     const marker =
-      `\n\n[…ZeroScript: result truncated to fit DeepSeek's ${SEND_CAP}-character ` +
+      `\n\n[…XW Studio: result truncated to fit DeepSeek's ${SEND_CAP}-character ` +
       `input limit - ${omitted} of ${text.length} characters omitted. Do NOT re-run ` +
       `the command; work with the head and tail shown here…]\n\n`;
     const budget = SEND_MAX - marker.length;
@@ -752,7 +752,7 @@ const ZSProvider = (() => {
     const arr = new Uint8Array(bin.length);
     for (let j = 0; j < bin.length; j++) arr[j] = bin.charCodeAt(j);
     const ext = mime.includes("png") ? "png" : "jpg";
-    return new File([arr], `zeroscript_${Date.now()}_${i}.${ext}`, { type: mime });
+    return new File([arr], `xwstudio_${Date.now()}_${i}.${ext}`, { type: mime });
   }
 
   // Staged composer attachments. DeepSeek's file-list uses fully HASHED classes
@@ -767,10 +767,10 @@ const ZSProvider = (() => {
     try {
       return [...document.querySelectorAll("img")].filter(
         (im) => !im.closest(S.chatItem) &&
-          // blob: = pending local preview; the alt (our "zeroscript_..." filename)
+          // blob: = pending local preview; the alt (our "xwstudio_..." filename)
           // survives once the upload replaces the blob src with a CDN url, so the
           // idempotency/presence checks keep matching after upload completes.
-          (/^blob:/.test(im.getAttribute("src") || "") || /^zeroscript_/.test(im.getAttribute("alt") || "")));
+          (/^blob:/.test(im.getAttribute("src") || "") || /^xwstudio_/.test(im.getAttribute("alt") || "")));
     } catch { return []; }
   };
 
@@ -825,7 +825,7 @@ const ZSProvider = (() => {
   // composer events (Enter key, send-button click, native stop / continue).
   // handlers = {
   //   isBlocked():bool        - agent busy (injecting/running/starting)
-  //   isStarted():bool        - a ZeroScript session exists in this chat
+  //   isStarted():bool        - a XW Studio session exists in this chat
   //   onBlockedAttempt()      - user tried to send before starting (fresh chat)
   //   onUserMessage(base)     - a genuine user message is being sent
   //   onNativeStop()          - user clicked the site's own stop button
