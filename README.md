@@ -1,11 +1,17 @@
-# ZeroScript - Free AI Agent for Roblox Studio
+# XW Studio for Chrome - Free AI Agent for Roblox Studio
 
 ![GitHub stars](https://img.shields.io/github/stars/sebattfg/ZeroScript-Free?style=social)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-**ZeroScript** is a free browser extension that turns ChatGPT, DeepSeek, Gemini, Kimi, GLM, Qwen, Arena or Meta AI into a Roblox Studio AI agent.
+**XW Studio** is a free browser extension that turns ChatGPT, DeepSeek, Gemini, Kimi, GLM, Qwen, Arena, Microsoft Copilot, HuggingChat, Mistral Vibe or Meta AI into a Roblox Studio AI agent.
 Control Roblox Studio with AI directly from your browser - read/edit scripts, run Luau, generate assets, all from a normal AI chat. No API key, no terminal, no coding needed.
+
+## XW Studio 1.7 — multi-agent settings
+
+Click **Settings** in the extension popup to open a dedicated tab. Enable the team, choose a workflow and safety mode, then assign any supported AI to six roles: **Designer, Builder, Debugger, Security reviewer, QA tester, and Producer / architect**. The profile is stored locally and added to the active chat's system prompt. Plan preview and automatic Output-driven debugging are opt-in controls in the same page.
+
+The current release provides role-aware orchestration instructions and safe planning in the active chat. It does not silently open or control several AI tabs at once; cross-tab execution remains a later stage so each external site keeps its own login and consent boundary.
 
 > 🌐 **Website: [zerodev.tools/zeroscript](https://zerodev.tools/zeroscript)** the free Lemonade.gg / Luamotion alternative for building Roblox games with AI.
 
@@ -117,9 +123,9 @@ See [CHANGELOG.md](CHANGELOG.md) for older releases.
 - Microsoft Edge or Chrome
 - Python 3.9+ (installed automatically on Windows, or install it yourself on macOS - see [python.org/downloads](https://www.python.org/downloads/))
 
-## Support
+## Project
 
-ZeroScript is free. If it saves you time: [Ko-fi](https://ko-fi.com/sebattfg) - Robux tip passes available in the extension panel
+XW Studio is a free, open-source project. Use the issue tracker in the project repository for bugs, feature requests and implementation discussion.
 
 ---
 

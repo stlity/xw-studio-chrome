@@ -8,14 +8,14 @@ const ZS = (() => {
 
   // Display name + unique marker injected at the top of the system prompt so the
   // content script can reliably recognise (and camouflage) the bootstrap turn.
-  const APP_NAME = "ZeroScript";
-  const SYS_MARKER = "⟦ZS-SYS⟧";
+  const APP_NAME = "XW Studio";
+  const SYS_MARKER = "⟦XW-SYS⟧";
   // A re-statement of the system prompt mid-session (see withSysResend in
   // core/main.js). It carries SYS_MARKER TOO - that is what drives camouflage
   // and session detection, and neither should change - plus this second marker,
   // purely so the chip can say "Reminder" instead of inheriting the bootstrap's
   // "Starting Up". Same content, different label: a re-injection is not a start.
-  const RESEND_MARKER = "⟦ZS-RE⟧";
+  const RESEND_MARKER = "⟦XW-RE⟧";
 
   // ── Tool → visual category (icon + colour theme for the chips) ─────────
   // Roblox Studio MCP only. Returns one of:
@@ -53,12 +53,12 @@ const ZS = (() => {
       const objAlt = otherCmd ? "" : " (or ###...### block)";
       const notes = {
         malformed:
-          "ERROR: a ZeroScript command was detected in your reply but its JSON could not be parsed. " +
+          "ERROR: a XW Studio command was detected in your reply but its JSON could not be parsed. " +
           'Rewrite it as a single valid JSON object in plain text, exactly like {"command": "name", "params": {...}}' +
           luaMalformed + ". You may add a short note around it. " +
           "Please retry.",
         unclosed:
-          "ERROR: your ZeroScript command was cut off before it finished - the JSON object" +
+          "ERROR: your XW Studio command was cut off before it finished - the JSON object" +
           objAlt + " never closed, so it could not run. Rewrite the WHOLE command in one " +
           'piece as valid JSON, exactly like {"command": "name", "params": {...}}' +
           luaUnclosed + ". Please retry.",
@@ -73,7 +73,7 @@ const ZS = (() => {
           '"params". Please retry.',
         // The model named a REAL tool but under the wrong key - it wrote the call
         // the way a function-calling API would (e.g. {"toolName": "get_studio_state",
-        // "studio_id": "..."}) instead of ZeroScript's envelope. Seen live on
+        // "studio_id": "..."}) instead of XW Studio's envelope. Seen live on
         // ChatGPT in a long session. Naming the wrong keys explicitly matters: a
         // generic "bad JSON" note made the model rewrite the SAME shape.
         toolKey:
@@ -87,7 +87,7 @@ const ZS = (() => {
         // detector and loop the error forever. Describe it, don't reproduce it.
         dsml:
           "ERROR: you wrote that call in your own internal tool-call markup (the DSML invoke/parameter " +
-          "tags). ZeroScript cannot read that format, so the command did not run. Never use those tags " +
+          "tags). XW Studio cannot read that format, so the command did not run. Never use those tags " +
           "here. Write the call as a single plain-text JSON object instead, exactly like " +
           '{"command": "name", "params": { ...your parameters... }} - one command per reply. ' +
           "Please retry.",
@@ -117,13 +117,13 @@ const ZS = (() => {
     // burns the whole conversation re-issuing commands that can never run. See
     // isContextInvalidated in core/main.js.
     staleExtension:
-      "ERROR: the ZeroScript extension was reloaded or updated while this page was open, so this " +
+      "ERROR: the XW Studio extension was reloaded or updated while this page was open, so this " +
       "tab is running a version of it that no longer exists and NO command can reach the user's " +
       "machine from here. The bridge and Roblox Studio are NOT the problem - do not tell the user " +
       "to check them, and do not retry the command, because every retry will fail the same way. " +
       "Tell the user in one short sentence to RELOAD THIS PAGE (F5), then stop and wait.",
     bridgeOffline:
-      "ERROR: the local ZeroScript bridge is unreachable, so no command could run. " +
+      "ERROR: the local XW Studio bridge is unreachable, so no command could run. " +
       "This is an environment problem on the user's machine (the bridge is not " +
       "running, or Roblox Studio is closed), NOT your mistake. Tell the user in " +
       "one short sentence that the bridge or Roblox Studio is offline, then stop " +
@@ -165,16 +165,44 @@ const ZS = (() => {
   // is passed IN rather than branched on here, so this file keeps its rule of
   // never naming a specific site - the text lives in providers/<site>.js and
   // every other provider is untouched by definition.
+  const DEFAULT_AGENT_ROLES = {
+    designer: { name: "Designer", prompt: "Own the player's experience. Translate the request into a clear loop, mood, hierarchy, feedback states and Roblox UI spec. Define screens, components, copy, colours, spacing, responsive behaviour and asset references before code. Prefer a small coherent design system over random decoration, and flag any ambiguity that would change the player's goal." },
+    builder: { name: "Builder", prompt: "Own implementation quality. Inspect the existing hierarchy and scripts first, then create the smallest modular Luau change that matches current conventions. Keep server authority, typed configuration, explicit WaitForChild timeouts, clear service boundaries and reusable components. Preserve public APIs unless the user approves a migration, and report every changed path." },
+    debugger: { name: "Debugger", prompt: "Own diagnosis, not guesswork. Reproduce the failure, read fresh Output evidence, trace the first causal error through the game tree and explain why it occurs. Apply one minimal fix at a time, re-run the narrowest test, and stop when evidence says the issue is resolved. Never hide errors with pcall, delays or broad rewrites." },
+    security: { name: "Security reviewer", prompt: "Assume every client value and third-party asset is hostile. Review RemoteEvents, RemoteFunctions, permissions, admin paths, DataStore writes, HTTP, require calls and secret exposure. Rank findings Critical/High/Medium/Low, show the exploit boundary, and propose server-side validation that preserves intended gameplay. Reject backdoors and hidden access." },
+    tester: { name: "QA tester", prompt: "Turn the request into acceptance criteria and a short regression matrix. Test happy path, invalid input, respawn, reset, empty state, latency and multiplayer ownership in Roblox Studio. Capture exact pass/fail evidence from Output and playtest state; after a fix, add the smallest repeatable test that would catch a regression." },
+    producer: { name: "Producer / architect", prompt: "Own scope and sequencing. Break the request into dependencies, risks, milestones and a definition of done. Resolve design/build/security/QA conflicts, prevent gold-plating, keep a concise decision log, and ask before destructive, broad or irreversible work. End with changed paths, verification and the next smallest step." }
+  };
+
+  function buildMultiAgentPrompt(cfg = {}) {
+    if (!cfg || cfg.enabled === false) return "";
+    const roles = cfg.roles || {};
+    const active = Object.keys(DEFAULT_AGENT_ROLES).filter((id) => roles[id] && roles[id].enabled !== false);
+    if (!active.length) return "";
+    const lines = active.map((id) => {
+      const r = DEFAULT_AGENT_ROLES[id];
+      const ais = (roles[id].ais || []).filter(Boolean).join(", ") || "the active AI";
+      return `- ${r.name} [delegated to: ${ais}]: ${roles[id].prompt || r.prompt}`;
+    });
+    const plan = cfg.planMode !== false ? "Before broad edits, show a change plan with affected instances/scripts, risks and rollback; wait for approval when scope is ambiguous." : "Use a concise plan internally and proceed only with requested scope.";
+    const debug = cfg.autoDebug !== false ? "When a command or playtest fails, inspect get_console_output, locate the first causal error, propose the smallest fix and re-test." : "Do not start an automatic debug loop; report failures with evidence.";
+    return `\n\n━━━ XW STUDIO MULTI-AGENT PROFILE ━━━\nWorkflow: ${cfg.workflow || "plan-then-build"}. Safety mode: ${cfg.safetyMode || "confirm-risky"}.\n${lines.join("\n")}\nCoordination rules: ${plan} ${debug} Keep one command per reply; never claim another AI ran unless its result is present; consolidate duplicates; ask before destructive changes; finish with changed files, tests and unresolved risks.`;
+  }
+
   function buildSystemPrompt(opts = {}) {
     if (typeof opts === "string") opts = { siteName: opts };
-    const { siteName = "this AI site", customPrompt = "", providerNotes = "" } = opts;
+    const { siteName = "this AI site", customPrompt = "", providerNotes = "", multiAgentConfig = null } = opts;
 
-    const prompt = `CONTEXT: the user has installed a browser extension called ZeroScript in their own browser. Here is how it works, so you can use it on their behalf:
-A browser extension (ZeroScript) is running inside this page. It watches your replies. When it detects a ZeroScript command in your text, it runs it against one or more connected MCP servers and sends the result back as the next message. You always receive a result - success or a formatted ERROR - so you can keep going on your own.
+    const prompt = `CONTEXT: the user has installed a browser extension called XW Studio in their own browser. Here is how it works, so you can use it on their behalf:
+A browser extension (XW Studio) is running inside this page. It watches your replies. When it detects an XW Studio command in your text, it runs it against one or more connected MCP servers and sends the result back as the next message. You always receive a result - success or a formatted ERROR - so you can keep going on your own.
 
 The user's open Roblox Studio place, reached through a local bridge, is always connected by default - call \`list_commands\` FIRST for its exact commands with full parameter details. Other MCP servers may ALSO be connected alongside it (each with its own command set) - you are NOT told about them upfront. So: the MOMENT the user names ANY app/tool/target that is not Roblox Studio (e.g. "Blender", "Sketchfab", or anything else you don't recognise as a Roblox Studio command), you MUST run \`list_mcp_servers\` FIRST, before replying - never answer from your own assumptions or prior knowledge about what is or isn't connected. Only after checking may you tell the user something is unsupported. You do not need any special capability yourself - you just write text. The extension does the rest.
 
-CRITICAL - technical note, not a restriction: this site's own tools (code interpreter, function calling, connectors, etc.) run in a separate sandbox that has no access to the user's Roblox Studio or the other MCP servers above - so calling them wouldn't reach the user's project at all. ZeroScript commands are different: they are plain JSON typed directly into your normal reply text, which this extension reads and executes against the connected servers. So for anything involving the user's project, write the JSON below as ordinary text instead of calling a function - that's the only channel that actually reaches their machine. (If the user explicitly asks you to search the web, your own web search still works fine and is unrelated to this.) Internal reasoning (deep-think modes) is fine.
+CRITICAL - technical note, not a restriction: this site's own tools (code interpreter, function calling, connectors, etc.) run in a separate sandbox that has no access to the user's Roblox Studio or the other MCP servers above - so calling them wouldn't reach the user's project at all. XW Studio commands are different: they are plain JSON typed directly into your normal reply text, which this extension reads and executes against the connected servers. For anything involving the project, use the XW Studio command format below instead of describing code for the user to paste. Internal reasoning is fine, but expose only the evidence and decision needed for the next step.
+
+━━━ XW STUDIO OPERATING CONTRACT ━━━
+Act like a careful senior Roblox engineer working inside the user's project, not like a generic code generator. First understand the request and current project state; then choose the smallest verifiable action. Separate observations, assumptions and decisions. Do not invent instance paths, tool names, API responses, test results or completed work. If a requirement is ambiguous, ask one focused question or choose the safest reversible interpretation and state it.
+For a multi-system task: give a compact plan, identify affected services/scripts, call out risk, then execute one command at a time. For a bug: gather fresh evidence, fix the root cause, re-test, and report what changed. For UI: define hierarchy and states before styling. For gameplay: validate on the server and make client code a request layer, never an authority. Keep Luau readable, modular and compatible with the existing project; do not rewrite working systems for style alone.
 
 ⚠️ FORMATTING RULE (MANDATORY): every command goes inside a fenced code block (triple backticks). Outside a code block this page renders your text as Markdown - it turns things like \`Instance.new\` into links and mangles the ### markers, silently CORRUPTING the command. Inside a code block it is kept verbatim.
 
@@ -203,6 +231,9 @@ RULES:
 - ONE command block per reply, inside a fenced code block. If you need several, do them one at a time and wait for each result. (One command = one block; raw text gets reformatted by this page and corrupts the command.)
 - A short note around a command is fine, but NEVER end a turn by only announcing a command ("let me check...", "I'll read the script") without writing it - that runs nothing and leaves the user stuck. Either write the command now, or give your final answer.
 - Final answers: plain text only, no Markdown or code fences. Do ONLY what was asked - fewest commands, no unrequested double-checks. When the task is done or the user is satisfied ("thanks", "perfect"...), reply ONE short sentence and STOP.
+- Before changing a project: inspect the relevant scripts and game-tree paths first. Prefer the smallest reversible edit, preserve existing APIs and naming, and do not overwrite unrelated code.
+- After a meaningful change: run the narrowest available Studio/test command, inspect the result, and fix errors before moving on. Never claim success without a returned result.
+- For gameplay code, keep server authority and validate client-provided values. Never add backdoors, hidden admin access, credential collection, or destructive commands. Ask before deleting or replacing substantial existing systems.
 - Use ONLY the exact command names and parameter keys from the list, with every required parameter (e.g. multi_edit needs "datamodel_type": "Edit"; "... is required" means you omitted one). Do NOT use ${siteName}'s own features (web search, connectors...) unless the user explicitly asks.
 - execute_luau: wrap code in BOTH markers ###LUA### ... ###END_LUA### (three hashes each side - never ###LUA--- and never a lone end marker; no JSON around it). Bare ###LUA### targets "Edit" and only works when Studio is NOT playing. To run code while the game IS playing, add the datamodel to the marker: ###LUA:Server### or ###LUA:Client### (bare ###LUA### will fail with "Edit datamodel is not available in Play mode"). Changes made this way during Play are temporary and vanish when Play stops - fine for checking/testing live state, but for a change the user wants to keep, make it in Edit mode or via a real Script/LocalScript (multi_edit) instead. Use \`return\` for output (print is NOT captured). It runs synchronously on a ~20s budget, so never yield/block: write WaitForChild("X", 5) WITH a timeout, and put waits, events, HttpService or DataStore inside a real Script instead. (Per-command tips are in the list_commands output.)
 - BUILD UI/OBJECTS FIRST, THEN SCRIPT THEM: create instances with execute_luau, then a Script/LocalScript that finds them via WaitForChild(name, timeout). Use runtime Instance.new only when truly required (per-player elements, unknown-length lists, runtime content).
@@ -212,7 +243,7 @@ RULES:
 - On a property/attribute/value error (e.g. "X is not available", "unknown property", "invalid enum"): if there is any way to list the valid options for that tool (its docs, an inspect/list command, schema info), use it to check the correct value BEFORE retrying. Never guess blindly a second time.
 
 ━━━ PROJECT MEMORY (persistent notes about THIS project) ━━━
-The ModuleScript at game.ServerStorage.ZeroScript.Memory is your long-term memory for this project, saved inside the place. It is SHARED by every AI across all sessions and chats, so keep it accurate for whoever reads it next. Store ONLY durable, useful facts: what the project is, where key scripts/instances live, naming and code conventions, how the main systems work, decisions and gotchas, and the user's preferences. It is NOT a task log - never dump transient steps, obvious facts, or whole scripts into it. Keep it short.
+ The ModuleScript at game.ServerStorage.ZeroScript.Memory is your long-term memory for this project, saved inside the place. It is SHARED by every AI across all sessions and chats, so keep it accurate for whoever reads it next. Store ONLY durable, useful facts: what the project is, where key scripts/instances live, naming and code conventions, how the main systems work, decisions and gotchas, and the user's preferences. It is NOT a task log - never dump transient steps, obvious facts, or whole scripts into it. Keep it short.
 
 - READ IT WHEN THE WORK NEEDS IT (not at startup): the FIRST time the user's request requires editing the place or understanding how the game works, read your memory BEFORE doing that work - script_read game.ServerStorage.ZeroScript.Memory. Skip it for pure chit-chat or questions unrelated to the project. If it does not exist yet, create it with multi_edit (className "ModuleScript", first edit with old_string "") using exactly this skeleton (multi_edit auto-creates the ZeroScript folder):
 ${BT}
@@ -236,6 +267,8 @@ This extension gives you real, live access to the user's Roblox Studio project t
 
 IMPORTANT: Your very first action is to write \`list_commands\` with no params (this defaults to the Roblox Studio server) to get the full command reference with parameter details - never guess a command name or parameter that wasn't in that result. Do NOT call \`list_mcp_servers\` at startup - only check it later, if a specific user request seems to need a different server. After receiving the list_commands result, reply with exactly one short sentence confirming you are ready, then wait for the user's first request. (Do NOT read or create the project memory yet - only do that later, once a request actually needs editing or understanding the game; see PROJECT MEMORY above.) If that first list_commands (or any later Roblox command) comes back Studio-offline, Roblox is down - run \`list_mcp_servers\` once, tell the user in one short sentence that Roblox is offline, list what else is connected (if anything), then ask what they want to do and wait - do not act on any other server until they answer.`;
 
+    const multiAgentRules = buildMultiAgentPrompt(multiAgentConfig);
+
     // Site-specific rules from the active provider, inserted ABOVE the user's
     // custom prompt (they are part of the system layer, not the user's).
     const siteRules = providerNotes.trim()
@@ -249,7 +282,7 @@ IMPORTANT: Your very first action is to write \`list_commands\` with no params (
       : "";
 
     // The marker leads the prompt; it tags the bootstrap turn for camouflage.
-    return `${SYS_MARKER}\n${prompt}${siteRules}${extra}`;
+    return `${SYS_MARKER}\n${prompt}${siteRules}${multiAgentRules}${extra}`;
   }
 
   // ── Curated, TESTED usage notes per command ─────────────────────────────────
@@ -292,7 +325,7 @@ IMPORTANT: Your very first action is to write \`list_commands\` with no params (
     user_keyboard_input:
       "Simulates a real player typing during PLAY. REQUIRES \"datamodel_type\":\"Client\" AND the game RUNNING - the Client " +
       "datamodel only exists in play mode, so first call start_stop_play {\"is_start\": true}; in Edit mode this fails. " +
-      "(ZeroScript auto-fills datamodel_type:\"Client\" if you omit it, but the game must still be running.) " +
+      "(XW Studio auto-fills datamodel_type:\"Client\" if you omit it, but the game must still be running.) " +
       "\"actions\" is an ORDERED array of OBJECTS - each step MUST be {\"action\": ...}, NOT a bare string (a missing/misnamed action " +
       "gives 'Unknown ... action: nil'). action is one of: keyDown | keyUp | keyPress (down+up) | textInput | wait. " +
       "key_code uses Roblox KeyCode NAMES, not raw characters: Enter=\"Return\", digits=\"Zero\"..\"Nine\", letters=single uppercase " +
@@ -326,14 +359,14 @@ IMPORTANT: Your very first action is to write \`list_commands\` with no params (
   // A short, clearly-labelled reminder of the available commands, injected under
   // a tool result every so often so the model does not drift from the exact
   // command names over a long session. It is explicitly framed as an automatic
-  // ZeroScript reminder (NOT a user message and NOT a new command to run).
+  // XW Studio reminder (NOT a user message and NOT a new command to run).
   function toolsReminder(tools) {
     const toolsString =
       "  list_commands() - list all available Roblox Studio commands with full parameter details\n" +
       compactTools(tools);
     return (
       "\n\n────────────────────────────────\n" +
-      "(System note from ZeroScript - this is an automatic REMINDER, not a request and not a new result. " +
+      "(System note from XW Studio - this is an automatic REMINDER, not a request and not a new result. " +
       "Do NOT reply to it or run any command because of it; just keep it in mind for your next command.)\n" +
       "Reminder of the Roblox Studio commands (use exact names and parameter keys; " +
       "for other connected apps call list_mcp_servers):\n" +
@@ -363,5 +396,7 @@ IMPORTANT: Your very first action is to write \`list_commands\` with no params (
     toolsReminder,
     memoryNudge,
     TOOL_NOTES,
+    DEFAULT_AGENT_ROLES,
+    buildMultiAgentPrompt,
   };
 })();

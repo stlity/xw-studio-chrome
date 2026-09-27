@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>XW Studio — Multi-agent settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="brand-mark">XW</div>
+      <div><p class="eyebrow">XW STUDIO / CONFIGURATION</p><h1>Мультиагенты</h1><p class="lead">Соберите команду AI для Roblox Studio: назначьте роли, выберите доступные AI и задайте безопасный workflow.</p></div>
+      <label class="master-toggle"><input id="agents-enabled" type="checkbox"><span class="switch"></span><b>Команда включена</b></label>
+    </header>
+
+    <section class="card workflow-card">
+      <div class="section-head"><div><p class="eyebrow">01 / WORKFLOW</p><h2>Как команда принимает решения</h2></div><span class="badge">M3 GREEN</span></div>
+      <div class="select-grid">
+        <label>Режим работы<select id="workflow"><option value="plan-then-build">Сначала план → потом сборка</option><option value="parallel-review">Параллельно → сводка → проверка</option><option value="build-then-audit">Сборка → аудит → исправления</option></select></label>
+        <label>Защита изменений<select id="safety"><option value="confirm-risky">Подтверждать рискованные действия</option><option value="preview-only">Только план и preview</option><option value="safe-auto">Безопасные действия автоматически</option></select></label>
+      </div>
+      <div class="checks"><label><input id="plan-mode" type="checkbox" checked> Показывать план изменений перед большой задачей</label><label><input id="auto-debug" type="checkbox" checked> После ошибки читать Output и предлагать автодебаг</label></div>
+      <p class="hint">Настройки сохраняются локально в браузере. XW Studio не отправляет их на отдельный сервер.</p>
+    </section>
+
+    <section class="card">
+      <div class="section-head"><div><p class="eyebrow">02 / TEAM</p><h2>Роли и назначенные AI</h2><p class="sub">В каждой роли можно включить несколько AI. Ползунок означает, что роль участвует в профиле текущего чата.</p></div><button id="select-all" class="tonal">Выбрать все AI</button></div>
+      <div id="roles" class="roles"></div>
+    </section>
+
+    <section class="card preview-card">
+      <div class="section-head"><div><p class="eyebrow">03 / PREVIEW</p><h2>Что получит активный AI</h2></div><span id="save-state" class="save-state">Не сохранено</span></div>
+      <pre id="preview" class="preview"></pre>
+    </section>
+
+    <footer><button id="save" class="primary">Сохранить настройки</button><button id="reset" class="text-button">Сбросить к умолчанию</button><span id="toast" role="status"></span></footer>
+  </main>
+  <script src="core/config.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

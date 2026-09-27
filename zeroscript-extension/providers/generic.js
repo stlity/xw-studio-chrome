@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Experimental provider for free AI chat sites with a conventional textarea/
+// contenteditable composer. It intentionally uses resilient semantic selectors.
+// Site-specific providers remain preferred when a site exposes a stable DOM API.
+// eslint-disable-next-line no-unused-vars
+const ZSProvider = (() => {
+  "use strict";
+  let diag = () => {};
+  let locked = false;
+  const host = location.hostname;
+  const displayName = host.includes("copilot") ? "Microsoft Copilot" : host.includes("mistral") ? "Mistral Vibe" : "HuggingChat";
+  const timings = { GEN_IDLE_MS: 1400, REASON_IDLE_MS: 8000, WARMUP_MS: 30000, REASON_NOREPLY_MS: 60000, STABLE_MS: 7000, RESPONSE_TIMEOUT_MS: 240000 };
+  const TEXT = "textarea:not(#zs-set-text), [contenteditable=\"true\"]:not(#zs-set-text)";
+  const SEND = "button[type=submit], button[aria-label*='Send' i], button[aria-label*='send' i], button[data-testid*='send' i], button[class*='send' i]";
+  const STOP = "button[aria-label*='Stop' i], button[aria-label*='stop' i], button[data-testid*='stop' i]";
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const visible = (e) => e && !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length);
+  const text = (e) => (e && (e.innerText || e.textContent || "")).trim();
+  const editor = () => [...document.querySelectorAll(TEXT)].filter((e) => !e.closest("#zs-root") && visible(e)).pop() || null;
+  const sendButton = () => [...document.querySelectorAll(SEND)].filter((e) => !e.closest("#zs-root") && visible(e)).pop() || null;
+  const assistant = (e) => {
+    const role = (e.getAttribute("data-message-author-role") || e.getAttribute("data-author") || e.getAttribute("aria-label") || "").toLowerCase();
+    return /assistant|bot|copilot|ai|model|hugging/.test(role);
+  };
+  function allItems() {
+    const sels = ["[data-message-author-role]", "[data-testid*='message' i]", "article", "[role='article']"];
+    const out = [], seen = new Set();
+    for (const e of document.querySelectorAll(sels.join(","))) {
+      if (!visible(e) || e.closest("#zs-root") || !text(e) || seen.has(e)) continue;
+      // Prefer the outer message element, not nested spans with the same marker.
+      if ([...e.children].some((c) => c.matches && sels.some((s) => { try { return c.matches(s); } catch { return false; } }))) continue;
+      seen.add(e); out.push(e);
+    }
+    return out;
+  }
+  const isAssistantItem = (e) => assistant(e);
+  const isUserItem = (e) => !assistant(e);
+  const assistantItems = () => allItems().filter(isAssistantItem);
+  const lastAssistant = () => assistantItems().pop() || null;
+  const itemText = (e) => text(e);
+  const classifyText = (e, exclude) => {
+    if (!e) return "";
+    const copy = e.cloneNode(true);
+    copy.querySelectorAll(".zs-chip, " + (exclude || "#zs-never")).forEach((n) => n.remove());
+    return text(copy);
+  };
+  const getEditor = editor;
+  const editorText = () => { const e = editor(); return e ? ("value" in e ? e.value : e.textContent || "") : ""; };
+  const setEditor = (e, value) => {
+    if (!e) return;
+    if ("value" in e) {
+      const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), "value")?.set;
+      setter ? setter.call(e, value) : (e.value = value);
+      e.dispatchEvent(new Event("input", { bubbles: true }));
+    } else {
+      e.focus(); document.execCommand("selectAll", false); document.execCommand("insertText", false, value);
+      e.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: value }));
+    }
+  };
+  const clickSend = () => { const b = sendButton(); if (b) { b.click(); return true; } return false; };
+  async function typeAndSend(value) { const e = editor(); if (!e) throw new Error("composer not found"); setEditor(e, value); await sleep(120); if (!clickSend()) e.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true })); }
+  function setInputLock(on) { locked = !!on; const e = editor(); if (!e) return; if (on) { e.dataset.xwPlaceholder = e.getAttribute("placeholder") || ""; e.setAttribute("readonly", ""); e.setAttribute("placeholder", "XW Studio is working…"); } else { e.removeAttribute("readonly"); if (e.dataset.xwPlaceholder != null) e.setAttribute("placeholder", e.dataset.xwPlaceholder); } }
+  const isGenerating = () => !!document.querySelector(STOP);
+  const isBusyNow = isGenerating;
+  const isHardGenerating = isGenerating;
+  const stopGeneration = () => { const b = [...document.querySelectorAll(STOP)].find(visible); if (b) b.click(); };
+  const snapshot = () => ({ host, items: allItems().length, assistants: assistantItems().length, editor: !!editor() });
+  const streamLen = (e) => itemText(e).length;
+  const readAssistant = () => { const item = lastAssistant(); return item ? { present: true, reply: itemText(item), thinking: "", item } : { present: false, reply: "", thinking: "", item: null }; };
+  const itemKey = (e) => e ? (e.getAttribute("data-message-id") || e.getAttribute("data-testid") || null) : null;
+  const conversationKey = () => location.href;
+  const chatIsEmpty = () => allItems().length === 0;
+  const isFreshChat = () => chatIsEmpty() && !!editor();
+  const composerFrame = () => editor()?.parentElement || null;
+  const barMount = () => { const e = editor(); const p = e?.parentElement; return p ? { parent: p, before: p.firstElementChild, inside: true } : null; };
+  const barAnchor = () => editor()?.parentElement || null;
+  const ensureComposerReady = () => ({ ready: !!editor() });
+  const enforceComposer = () => { if (locked) setInputLock(true); return { ready: !!editor() }; };
+  const installSendHooks = () => {};
+  const findToolBlockSpot = (e) => e;
+  const turnHalted = () => false;
+  const scanError = () => null;
+  const isTooLongMsg = (s) => /too long|context limit|лимит контекста/i.test(s || "");
+  const isBusyMsg = (s) => /busy|try again|rate limit|занят/i.test(s || "");
+  const captchaPresent = () => /captcha|verify you are human/i.test(document.body?.innerText || "");
+  const overlayBlocking = () => false;
+  const modeWarning = () => "";
+  const conversation = () => location.href;
+  const assistantCount = () => assistantItems().length;
+  const userCount = () => allItems().filter(isUserItem).length;
+  const lastAssistantId = () => itemKey(lastAssistant());
+  return {
+    id: host.includes("copilot") ? "copilot" : host.includes("mistral") ? "mistral" : "huggingchat", displayName, supportsVision: false, timings,
+    init({ diag: d } = {}) { if (d) diag = d; }, allItems, isUserItem, isAssistantItem, itemText, classifyText,
+    assistantCount, userCount, lastAssistant, lastAssistantId, itemKey, readAssistant, streamLen, snapshot,
+    getEditor, editorText, chatIsEmpty, isFreshChat, composerFrame, barMount, barAnchor, setInputLock,
+    typeAndSend, stopGeneration, isGenerating, isBusyNow, isHardGenerating, enforceComposer, ensureComposerReady,
+    turnHalted, findToolBlockSpot, scanError, isTooLongMsg, isBusyMsg, captchaPresent, overlayBlocking, modeWarning,
+    conversationKey, installSendHooks, reliableCounts: true, chipAtItemLevel: true, chipAppend: true,
+    promptExtra: "- This site is connected through XW Studio's experimental generic adapter. Prefer one short command per turn and wait for the result before continuing."
+  };
+})();

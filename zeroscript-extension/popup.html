@@ -1,38 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    body { width: 248px; margin: 0; font-family: "Segoe UI", sans-serif; background: #16161a; color: #e8e8ec; }
-    .wrap { padding: 14px; }
-    h1 { font-size: 14px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
-    .ver { font-size: 9.5px; font-weight: 500; letter-spacing: 0.2px;
-           color: rgba(255,255,255,0.55); background: none; border: none;
-           padding: 0; }
-    .dot { width: 9px; height: 9px; border-radius: 50%; background: #6b7280; }
-    .dot.on { background: #34d399; box-shadow: 0 0 8px #34d399; }
-    .dot.warn { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
-    .row { font-size: 12px; opacity: 0.85; margin: 6px 0; }
-    button { width: 100%; margin-top: 8px; padding: 8px; border: 0; border-radius: 8px; cursor: pointer; font-size: 12px; }
-    .ghost { background: rgba(255,255,255,0.08); color: #e8e8ec; }
-    .kofi { background: rgba(255,105,135,.16); color: #ff8fa3; border: 1px solid rgba(255,105,135,.4) !important; font-weight: 700; }
-    code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <h1><span id="dot" class="dot"></span> ZeroScript <span id="ver" class="ver"></span> <span style="font-size:9px;opacity:.6">DeepSeek</span></h1>
-    <div class="row" id="state">Bridge: …</div>
-    <div class="row" id="tools"></div>
-    <div class="row" id="servers" style="white-space:pre-line; font-family:ui-monospace,monospace; opacity:0.75"></div>
-    <button class="ghost" id="reconnect">↻ Reconnect bridge</button>
-    <button class="ghost" id="restart">⟳ Restart Roblox server</button>
-    <button class="ghost" id="settings">⚙ Settings</button>
-    <button class="kofi" id="kofi">♥ Tip the developer on Ko-fi</button>
-    <div class="row" style="margin-top:10px; opacity:0.6">
-      Run <code>start.bat</code> and open <b>Roblox Studio</b>, then go to a supported AI.
-    </div>
-  </div>
-  <script src="popup.js"></script>
-</body>
-</html>
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><style>
+:root{color-scheme:dark;--p:#6cdbad;--on:#003827;--s:#0f1512;--c:#1b211e;--o:#89938b;--t:#e0e9e2;--m:#aebbb2}*{box-sizing:border-box}body{width:280px;margin:0;background:var(--s);color:var(--t);font:13px/1.45 Roboto,"Segoe UI",sans-serif}.wrap{padding:16px}.head{display:flex;align-items:center;gap:10px;margin-bottom:14px}.mark{width:28px;height:28px;display:grid;place-items:center;border-radius:10px;background:var(--p);color:var(--on);font-weight:900;font-size:11px}.title{font-weight:800;letter-spacing:.01em}.ver{font-size:10px;color:var(--m);font-weight:500}.dot{width:9px;height:9px;margin-left:auto;border-radius:50%;background:#69756d}.dot.on{background:var(--p);box-shadow:0 0 9px var(--p)}.dot.warn{background:#f6c453;box-shadow:0 0 9px #f6c453}.row{color:var(--m);margin:6px 0}.panel{padding:12px 14px;background:var(--c);border:1px solid #89938b44;border-radius:18px;margin-bottom:12px}.servers{white-space:pre-line;font:11px/1.6 ui-monospace,monospace;color:var(--m);max-height:88px;overflow:auto}.actions{display:grid;gap:8px}button{width:100%;padding:10px 12px;border-radius:999px;border:1px solid #89938b66;cursor:pointer;font:700 12px inherit;transition:.15s}button:hover{filter:brightness(1.1);transform:translateY(-1px)}.ghost{background:transparent;color:var(--t)}.primary{background:var(--p);border-color:transparent;color:var(--on)}code{padding:2px 5px;border-radius:5px;background:#08100c;color:var(--p);font:11px ui-monospace,monospace}.hint{font-size:11px;color:var(--m);margin:12px 0 0}
+</style></head>
+<body><div class="wrap"><div class="head"><span class="mark">XW</span><span class="title">XW Studio <span id="ver" class="ver"></span></span><span id="dot" class="dot"></span></div><div class="panel"><div class="row" id="state">Bridge: …</div><div class="row" id="tools"></div><div id="servers" class="servers"></div></div><div class="actions"><button class="ghost" id="reconnect">↻ Reconnect bridge</button><button class="ghost" id="restart">⟳ Restart Roblox server</button><button class="primary" id="settings">⚙ Настройки мультиагентов</button></div><p class="hint">Запусти <code>start.bat</code>, открой Roblox Studio и включи MCP.</p></div><script src="popup.js"></script></body></html>
