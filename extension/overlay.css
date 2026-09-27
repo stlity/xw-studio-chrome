@@ -1116,6 +1116,11 @@ html:not(.zs-light) #zs-root {
 #zs-action[data-kind="start"], #zs-setup-video, #zs-setup-copy, #zs-set-save, #zs-mcp-add,
 .zs-banner-video, .zs-banner-acts button { background: var(--xw-primary) !important; color: var(--xw-on-primary) !important; border-color: transparent !important; border-radius: 999px !important; }
 #zs-action[data-kind="start-degraded"] { background: var(--xw-warning) !important; color: #1f1700 !important; border-radius: 999px !important; }
+#zs-action[data-kind="start"]:disabled, #zs-action[data-kind="start-degraded"]:disabled {
+  background: var(--xw-surface-high) !important; color: color-mix(in srgb, var(--xw-on-surface) 48%, transparent) !important;
+  border-color: color-mix(in srgb, var(--xw-outline) 38%, transparent) !important;
+  box-shadow: none !important; cursor: not-allowed !important; opacity: .72;
+}
 #zs-stop { border-radius: 999px !important; }
 #zs-switch, #zs-discord, #zs-support, .zs-tip-opt, .zs-site-opt, #zs-set-text, .zs-mcp-field,
 #zs-setup-dismiss, .zs-banner-x { border-radius: 16px !important; background: color-mix(in srgb, var(--xw-surface) 70%, transparent) !important; color: var(--xw-on-surface) !important; border-color: color-mix(in srgb, var(--xw-outline) 55%, transparent) !important; }
