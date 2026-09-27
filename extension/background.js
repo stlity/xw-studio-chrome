@@ -64,6 +64,7 @@ const pending = new Map(); // id -> {resolve, timer}
 let toolsCache = [];
 let mcpAlive = false;
 let serversCache = [];
+let targetMode = "roblox";
 // true/false = a PLACE is loaded and usable in Roblox Studio; null = unknown.
 // The MCP process stays alive when Studio is closed or its MCP option is off,
 // so this is probed separately (bridge "studio_status").
@@ -237,6 +238,7 @@ async function refreshStudioStatus() {
 }
 
 function handleBridgeMessage(msg) {
+  if (msg.mode === "terminal" || msg.mode === "roblox") targetMode = msg.mode;
   if ("studio" in msg && (typeof msg.studio === "boolean" || msg.studio === null)) {
     studioConnected = msg.studio;
   }
@@ -252,6 +254,7 @@ function handleBridgeMessage(msg) {
     return;
   }
   if (msg.type === "connected") {
+    if (msg.mode === "terminal" || msg.mode === "roblox") targetMode = msg.mode;
     mcpAlive = !!msg.mcp_alive;
     if (Array.isArray(msg.tools)) toolsCache = msg.tools;
     if (Array.isArray(msg.servers)) serversCache = msg.servers;
@@ -277,6 +280,7 @@ function handleBridgeMessage(msg) {
     return;
   }
   if (msg.type === "mcp_status") {
+    if (msg.mode === "terminal" || msg.mode === "roblox") targetMode = msg.mode;
     mcpAlive = !!msg.alive;
     if (Array.isArray(msg.tools)) toolsCache = msg.tools;
     if (Array.isArray(msg.servers)) serversCache = msg.servers;
@@ -289,6 +293,12 @@ function handleBridgeMessage(msg) {
     // will drop right after this - the content script shows a spinner until the
     // reconnect lands and a fresh status arrives.
     resolvePending(msg.id, { ok: !!msg.ok, error: msg.error, restarting: !!msg.restarting });
+    return;
+  }
+  if (msg.type === "mode_status") {
+    if (msg.mode === "terminal" || msg.mode === "roblox") targetMode = msg.mode;
+    resolvePending(msg.id, { ok: !!msg.ok, mode: targetMode, error: msg.error });
+    broadcastStatus();
     return;
   }
   if (msg.type === "error") {
@@ -315,7 +325,7 @@ function failAllPending(reason) {
 
 // ── status push to any open DeepSeek tab + popup ─────────────────────────
 function statusObj() {
-  return { type: "zs-status", connected, mcpAlive, studio: studioConnected, studioApp, studioProc, tools: toolsCache.length, servers: serversCache };
+  return { type: "zs-status", connected, mcpAlive, mode: targetMode, studio: studioConnected, studioApp, studioProc, tools: toolsCache.length, servers: serversCache };
 }
 
 function broadcastStatus() {
@@ -356,6 +366,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       case "restart_mcp": {
         const r = await send({ type: "restart_mcp" }, 30000);
         sendResponse(r);
+        break;
+      }
+      case "set_mode": {
+        const mode = msg.mode === "terminal" ? "terminal" : "roblox";
+        const r = await send({ type: "set_mode", mode }, 10000);
+        if (r && r.ok) targetMode = mode;
+        sendResponse({ ...r, mode: targetMode });
+        broadcastStatus();
         break;
       }
       case "add_server": {

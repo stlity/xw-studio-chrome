@@ -161,7 +161,7 @@
     // This page outlived its extension build - nothing works until a reload.
     // Latched (never cleared): the context cannot come back. See bg().
     staleExtension: false,
-    bridge: { connected: false, mcpAlive: false, tools: 0 },
+    bridge: { connected: false, mcpAlive: false, mode: "roblox", tools: 0 },
     // Images from the most recent tool result, stashed by runTool for the
     // upcoming submitAndGetBase/typeAndSend call to attach as the LAST step
     // before sending (see the comment in runTool's r.images branch).
@@ -935,6 +935,10 @@
     // if the model explicitly asks via {"server": "<id>"} (see list_mcp_servers).
     if (name === "list_commands" || name === "list_tools") {
       await ensureTools();
+      if (A.bridge && A.bridge.mode === "terminal") {
+        const lines = A.toolList.map((t) => `${t.name}: ${t.description || "terminal tool"}`);
+        return `Output of '${name}':\nTerminal tools available:\n${lines.join("\n")}`;
+      }
       const requested = (args.server || "roblox").trim();
       // The MCP proxy keeps advertising Roblox's catalogue even with no Studio
       // attached, so list_commands would hand back the full command list and read
@@ -1643,6 +1647,7 @@
       customPrompt: ui.getCustomPrompt(),
       providerNotes: P.promptExtra || "",
       multiAgentConfig,
+      targetMode: A.bridge.mode || "roblox",
     });
   }
 
@@ -1840,8 +1845,8 @@
                                // the model makes seconds later)
       if (!alive()) return;
       if (!A.toolList.length) {
-        ui.banner("warn", "Bridge or Studio offline",
-          "Could not fetch Roblox tools. Run start.bat and make sure Roblox Studio is open, then try again.");
+        ui.banner("warn", "Bridge or target offline",
+          A.bridge.mode === "terminal" ? "Could not fetch terminal tools. Run start.bat and try again." : "Could not fetch Roblox tools. Run start.bat and make sure Roblox Studio is open, then try again.");
         return;
       }
       const modeState = await P.ensureComposerReady("startup");
@@ -1867,13 +1872,14 @@
       // Do not mark that as a ready agent: send one concise recovery turn that
       // explicitly requires the first executable XW command.
       let handshakeRes = startRes;
+      const startupTool = A.bridge.mode === "terminal" ? "terminal_list_dir" : "list_commands";
       const isCommandHandshake = (r) => {
         const n = r && r.calls && r.calls[0] && r.calls[0].tool;
         return r && r.kind === "tool" && r.calls.length === 1 &&
-          (n === "list_commands" || n === "list_tools");
+          (n === startupTool || n === "list_tools");
       };
       if (!isCommandHandshake(handshakeRes)) {
-        const recovery = "XW STARTUP RECOVERY: your previous reply did not execute the required startup command. Do not explain, do not ask the user to paste code, and do not describe manual Roblox steps. Send exactly one fenced JSON command now:\n```json\n{\"command\":\"list_commands\"}\n```\nThen wait for its result and reply only that you are ready.";
+        const recovery = `XW STARTUP RECOVERY: your previous reply did not execute the required startup command. Do not explain or ask for manual steps. Send exactly one fenced JSON command now:\n\`\`\`json\n${A.bridge.mode === "terminal" ? '{"command":"terminal_list_dir","params":{"path":"."}}' : '{"command":"list_commands"}'}\n\`\`\`\nThen wait for its result and reply only that you are ready.`;
         const recoveryBase = await submitAndGetBase(recovery);
         handshakeRes = await waitForResponse(recoveryBase);
       }
@@ -1881,7 +1887,7 @@
       // If the model calls list_commands as instructed, run it and wait for the "ready" reply.
       const firstName = handshakeRes.calls && handshakeRes.calls[0] && handshakeRes.calls[0].tool;
       if (handshakeRes.kind === "tool" && handshakeRes.calls && handshakeRes.calls.length === 1 &&
-          (firstName === "list_commands" || firstName === "list_tools")) {
+          (firstName === startupTool || firstName === "list_tools")) {
         decorate.toolBox(handshakeRes.item, "Loading commands", "run", "", true);
         const toolFeedback = await runTool(handshakeRes.calls[0]);
         // Roblox down short-circuits list_commands into a plain "offline" note
@@ -1890,7 +1896,7 @@
         // (the bridge keeps advertising Roblox's catalogue even with no Studio
         // attached, so A.toolList still has 25+ entries that were never actually
         // usable this boot).
-        if (/Roblox Studio is currently OFFLINE/.test(toolFeedback)) {
+        if (A.bridge.mode !== "terminal" && /Roblox Studio is currently OFFLINE/.test(toolFeedback)) {
           decorate.toolBox(startRes.item, "Loading commands", "err", "Roblox offline", true);
         } else {
           // Count what the model ACTUALLY received: list_commands is scoped to the
@@ -1909,7 +1915,7 @@
       A.started = true;
       rememberSession(P.conversationKey()); // survives virtualization AND reloads
       ui.setStarted(true);
-      ui.toast(`Agent ready. Ask ${P.displayName} to build something in Roblox.`);
+      ui.toast(`Agent ready. Ask ${P.displayName} to work in ${A.bridge.mode === "terminal" ? "Terminal" : "Roblox Studio"}.`);
     } catch (e) {
       if (alive()) ui.banner("warn", "Startup failed", String((e && e.message) || e));
     } finally {
@@ -2972,7 +2978,7 @@
       else if (A.starting) {
         toneClass = "starting";
         indicator = `<span class="zs-spin"></span>`;
-        msg = `Starting the Roblox agent…`;
+        msg = `Starting the ${A.bridge.mode === "terminal" ? "Terminal" : "Roblox"} agent…`;
         label = "Starting…"; kind = "starting"; disabled = true;
       } else if (A.started) {
         // Prefer the ADVERTISED list length (A.toolList - the AGGREGATE catalogue
@@ -2990,7 +2996,11 @@
         // bridge.py), so showing it while Studio/place isn't actually usable
         // reads as "everything's fine" when tool calls will just fail. Surface
         // the real blocker instead in that case.
-        if (A.bridge && A.bridge.connected === false) {
+        if (A.bridge && A.bridge.mode === "terminal") {
+          toneClass = A.bridge.connected ? "active" : "warn";
+          warn = !A.bridge.connected;
+          msg = A.bridge.connected ? `<b>Terminal agent active</b>${tools ? ` · ${tools} tools` : ""}` : `<b>Terminal agent</b> · bridge offline, run start.bat`;
+        } else if (A.bridge && A.bridge.connected === false) {
           // placeDown/appDown/studioDown are all false in this case (they're
           // only computed when the bridge IS connected - see setStatus), so
           // without this check the bridge dropping fell through to the
@@ -3033,7 +3043,7 @@
         if (bridgeOk) {
           toneClass = "standby";
           msg = `Standby. Start the agent, or just chat.`;
-          label = "▶︎ Start Roblox agent"; kind = "start";
+          label = `▶︎ Start ${A.bridge.mode === "terminal" ? "Terminal" : "Roblox"} agent`; kind = "start";
         } else if (addonOk) {
           // Roblox is down but another MCP server is live: allow a DEGRADED start
           // (yellow). The agent runs on the other server(s); Roblox tools stay
@@ -3058,7 +3068,7 @@
                   : studioDown
                     ? `Open <b>Roblox Studio</b> &amp; enable its MCP server.`
                     : `Open <b>Roblox Studio</b> for the tools.`;
-          label = "▶︎ Start Roblox agent"; kind = "start";
+          label = `▶︎ Start ${A.bridge.mode === "terminal" ? "Terminal" : "Roblox"} agent`; kind = "start";
         }
         disabled = !bridgeOk && !addonOk;
       } else {
@@ -3127,6 +3137,23 @@
     function setStatus(s) {
       A.bridge = s;
       if (!dot) return;
+      if (s.mode === "terminal") {
+        const ready = !!s.connected;
+        dot.className = ready ? "on" : "off";
+        dot.title = ready ? "Terminal bridge connected" : "Bridge offline, run start.bat";
+        bridgeOk = ready;
+        studioDown = false;
+        placeDown = false;
+        appDown = false;
+        studioProcUp = false;
+        addonOk = false;
+        if (wasConnected && !s.connected) bridgeAlert(true);
+        if (s.connected) bridgeAlert(false);
+        wasConnected = s.connected;
+        renderBar();
+        refreshSetup(s.connected);
+        return;
+      }
       const servers = s.servers || [];
       // XW Studio status tracks ONLY the primary Roblox MCP server. Every other
       // server is an addon and must NEVER make the dot/gate look connected while
@@ -4021,7 +4048,7 @@
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg && msg.type === "zs-status") {
-      ui.setStatus({ connected: msg.connected, mcpAlive: msg.mcpAlive, studio: msg.studio, studioApp: msg.studioApp, studioProc: msg.studioProc, tools: msg.tools, servers: msg.servers });
+      ui.setStatus({ connected: msg.connected, mcpAlive: msg.mcpAlive, mode: msg.mode, studio: msg.studio, studioApp: msg.studioApp, studioProc: msg.studioProc, tools: msg.tools, servers: msg.servers });
     }
     if (msg && msg.type === "zs-open-menu") {
       ui.openMenu(false); // from the popup's Settings button — opens at the top (Switch AI / custom prompt)

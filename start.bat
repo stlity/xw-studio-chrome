@@ -8,6 +8,27 @@ cd /d "%~dp0"
 if not exist "%~dp0logs" mkdir "%~dp0logs" >nul 2>nul
 set "LOGFILE=%~dp0logs\start.log"
 call :log "===== %DATE% %TIME%  start.bat launched ====="
+echo.
+echo   Select XW Studio target:
+echo     [Y] Roblox Studio agent
+echo     [N] Terminal agent
+echo.
+:choose_mode
+choice /C YN /N /M "  Start Roblox mode? [Y/N]: "
+if errorlevel 2 goto terminal_mode
+if errorlevel 1 goto roblox_mode
+goto choose_mode
+:roblox_mode
+set "XW_MODE=roblox"
+echo         Mode: Roblox Studio
+call :log "Target mode: roblox"
+goto mode_selected
+:terminal_mode
+set "XW_MODE=terminal"
+echo         Mode: Terminal
+call :log "Target mode: terminal"
+:mode_selected
+echo.
 REM Log the Windows build once per launch - most support requests arrive as a
 REM single terminal screenshot, so anything that identifies the machine's
 REM environment must be either ON SCREEN or in this log.

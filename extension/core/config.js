@@ -191,7 +191,8 @@ const ZS = (() => {
 
   function buildSystemPrompt(opts = {}) {
     if (typeof opts === "string") opts = { siteName: opts };
-    const { siteName = "this AI site", customPrompt = "", providerNotes = "", multiAgentConfig = null } = opts;
+    const { siteName = "this AI site", customPrompt = "", providerNotes = "", multiAgentConfig = null, targetMode = "roblox" } = opts;
+    const terminalMode = targetMode === "terminal";
 
     const prompt = `CONTEXT: the user has installed a browser extension called XW Studio in their own browser. Here is how it works, so you can use it on their behalf:
 A browser extension (XW Studio) is running inside this page. It watches your replies. When it detects an XW Studio command in your text, it runs it against one or more connected MCP servers and sends the result back as the next message. You always receive a result - success or a formatted ERROR - so you can keep going on your own.
@@ -267,6 +268,10 @@ This extension gives you real, live access to the user's Roblox Studio project t
 
 IMPORTANT: Your very first action is to write \`list_commands\` with no params (this defaults to the Roblox Studio server) to get the full command reference with parameter details - never guess a command name or parameter that wasn't in that result. Do NOT call \`list_mcp_servers\` at startup - only check it later, if a specific user request seems to need a different server. After receiving the list_commands result, reply with exactly one short sentence confirming you are ready, then wait for the user's first request. (Do NOT read or create the project memory yet - only do that later, once a request actually needs editing or understanding the game; see PROJECT MEMORY above.) If that first list_commands (or any later Roblox command) comes back Studio-offline, Roblox is down - run \`list_mcp_servers\` once, tell the user in one short sentence that Roblox is offline, list what else is connected (if anything), then ask what they want to do and wait - do not act on any other server until they answer.`;
 
+    const terminalRules = terminalMode ? `
+
+━━━ TERMINAL MODE OVERRIDE ━━━
+The active XW Studio target is the user's local Terminal, not Roblox Studio. Ignore Roblox-specific startup and memory instructions above for this chat. Your first action is to write a fenced JSON command for terminal_list_dir with {"path":"."} and wait for its result. Then use only the exact terminal_* tools returned by XW Studio. Use terminal_read_file before editing an existing file, terminal_write_file for deliberate file changes, and terminal_exec for commands. Work one command at a time, never claim a command ran without its returned result, and do not use the AI site's own code interpreter or connectors. Treat shell commands as consequential: never run destructive commands, credential theft, persistence, or broad deletion; ask the user before a potentially destructive change.` : "";
     const multiAgentRules = buildMultiAgentPrompt(multiAgentConfig);
 
     // Site-specific rules from the active provider, inserted ABOVE the user's
@@ -282,7 +287,7 @@ IMPORTANT: Your very first action is to write \`list_commands\` with no params (
       : "";
 
     // The marker leads the prompt; it tags the bootstrap turn for camouflage.
-    return `${SYS_MARKER}\n${prompt}${siteRules}${multiAgentRules}${extra}`;
+    return `${SYS_MARKER}\n${prompt}${terminalRules}${siteRules}${multiAgentRules}${extra}`;
   }
 
   // ── Curated, TESTED usage notes per command ─────────────────────────────────

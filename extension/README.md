@@ -1,6 +1,6 @@
 # XW Studio for Chrome - AI Roblox Studio Agent
 
-Control Roblox Studio with AI, for free. XW Studio turns a normal AI chat (ChatGPT, DeepSeek, Google Gemini, Kimi, GLM, Qwen, Arena, or Meta AI) into an agent that builds and scripts your Roblox game for you: just describe what you want, and it reads/edits scripts, runs Luau, inspects the game tree, and generates assets directly in Roblox Studio. No API key, no terminal, no coding required.
+Control Roblox Studio or your local Terminal with AI, for free. XW Studio turns a normal AI chat into an agent that can build and script your Roblox game or inspect/edit local files and run terminal commands. Choose the target in the popup; on Windows, `start.bat` also asks **Y = Roblox** or **N = Terminal**. No API key is required.
 
 It's a Chrome/Edge browser extension plus a small local bridge that connects the chat to Roblox Studio through the official MCP server. **DeepSeek is the recommended provider.** ChatGPT, Gemini, Kimi, GLM, Qwen, Arena and Meta AI also work. On ChatGPT, screenshots and image input are disabled on purpose (its free tier caps files/images on a separate quota from messages, so vision would only work part of the day); ChatGPT also summarises its own context in long sessions, so XW Studio re-states its operating instructions periodically (shown as a "Reminder" chip) to stop it forgetting it can run commands. Gemini and Kimi can be less stable: Gemini tends to stop using the Roblox tools in long sessions, and Kimi sometimes reaches for its own native tools instead of the Roblox commands. On Arena, keep the mode dropdown on **Direct** (XW Studio only supports Direct mode).
 
@@ -15,9 +15,8 @@ It's a Chrome/Edge browser extension plus a small local bridge that connects the
 
 **Then set up the Bridge:**
 1. **Download the Bridge** from the [XW Studio repository](https://github.com/stlity/xw-studio-chrome)
-2. **Open Roblox Studio** and load a Place
-3. **Enable the MCP server in Roblox Studio** (first time only): click **Assistant AI** in the top bar, then **...** > **Manage MCP Servers** > **Enable Studio as MCP Server**
-4. **Run the Bridge** - double-click `start.bat` (Windows) or `MacOS_Start.command` (macOS); a small window opens, the Bridge is running. On macOS, the first launch shows a Gatekeeper warning (normal for any downloaded script): click **Done**, then **System Settings > Privacy & Security**, scroll down, and click **Open Anyway**.
+2. **Run the Bridge** - double-click `start.bat` (Windows), then press **Y** for Roblox or **N** for Terminal. The same target can be changed later in the extension popup. On macOS, run `MacOS_Start.command`.
+3. For Roblox mode, **open Roblox Studio**, load a Place and enable MCP: click **Assistant AI** > **...** > **Manage MCP Servers** > **Enable Studio as MCP Server**.
 5. **Go to https://chat.deepseek.com** (recommended), https://chatgpt.com, https://gemini.google.com, https://www.kimi.com, https://chat.z.ai, https://chat.qwen.ai, https://arena.ai, https://claude.ai, https://grok.com, https://www.perplexity.ai, https://duck.ai, or https://www.meta.ai, open a new chat (only works on these exact addresses; on Arena use Direct mode)
 6. Click **Start session** in the XW Studio panel
 7. Type what you want to build

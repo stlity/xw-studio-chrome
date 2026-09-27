@@ -1,8 +1,8 @@
 # XW Studio for Chrome - Free AI Agent for Roblox Studio
 
 
-**XW Studio** is a free browser extension that turns ChatGPT, DeepSeek, Gemini, Kimi, GLM, Qwen, Arena, Microsoft Copilot, HuggingChat, Mistral Vibe or Meta AI into a Roblox Studio AI agent.
-Control Roblox Studio with AI directly from your browser - read/edit scripts, run Luau, generate assets, all from a normal AI chat. No API key, no terminal, no coding needed.
+**XW Studio** is a free browser extension that turns supported AI chats into a Roblox Studio or local Terminal agent.
+Use the popup to switch between Roblox and Terminal mode. In Terminal mode the agent can inspect folders, read/write project files and run local commands through the bridge. No API key is required.
 
 ## XW Studio 1.7 — multi-agent settings
 
@@ -44,7 +44,11 @@ To load the extension:
 - Click **Load unpacked**
 - Select the `extension` folder from the extracted zip
 
-### 2. Start Roblox Studio and enable MCP
+### 2. Choose a target and start the Bridge
+
+On Windows, run `start.bat` and press **Y** for Roblox Studio or **N** for Terminal. The choice is also available later in the extension popup.
+
+For Roblox mode, continue with the MCP setup below:
 
 Open Studio and load a Place, then enable MCP (first time only):
 

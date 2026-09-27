@@ -21,6 +21,7 @@
 import asyncio
 import json
 import os
+import platform
 import queue
 import subprocess
 import sys
@@ -82,6 +83,66 @@ CONFIG_PATH = os.path.join(HERE, "config.json")
 # The primary server. It is always present, added by the installer, and can
 # never be edited/removed through the extension (it is what XW Studio is FOR).
 PRIMARY_SERVER_ID = "roblox"
+RUN_MODE = os.environ.get("XW_MODE", "roblox").strip().lower()
+if RUN_MODE not in {"roblox", "terminal"}:
+    RUN_MODE = "roblox"
+PLATFORM_NAME = platform.system().lower()
+
+TERMINAL_TOOLS = [
+    {"name": "terminal_exec", "description": "Run a local shell command and return stdout/stderr. Use only for the user's requested work.", "inputSchema": {"type": "object", "properties": {"command": {"type": "string"}, "cwd": {"type": "string"}, "timeout_ms": {"type": "integer", "minimum": 1000, "maximum": 120000}}, "required": ["command"]}},
+    {"name": "terminal_list_dir", "description": "List files and folders in a local directory.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}},
+    {"name": "terminal_read_file", "description": "Read a UTF-8 text file from the local computer.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "max_chars": {"type": "integer", "minimum": 1, "maximum": 2000000}}, "required": ["path"]}},
+    {"name": "terminal_write_file", "description": "Write a UTF-8 text file on the local computer. Parent folders are created when needed.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}},
+]
+TERMINAL_TOOL_NAMES = {x["name"] for x in TERMINAL_TOOLS}
+BLOCKED_TERMINAL = ("format c:", "format c ", "shutdown /", "shutdown -", "rm -rf /", "mkfs", "del /s /q c:\\", "diskpart")
+
+def _terminal_path(value):
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(str(value or "."))))
+
+def _terminal_call(name, args, timeout):
+    if name == "terminal_exec":
+        command = str(args.get("command", "")).strip()
+        if not command:
+            raise ValueError("command is required")
+        low = command.lower().replace("\\", "/")
+        if any(x in low for x in BLOCKED_TERMINAL):
+            raise PermissionError("blocked destructive command")
+        cwd = _terminal_path(args.get("cwd", HERE))
+        if not os.path.isdir(cwd):
+            raise FileNotFoundError(f"cwd does not exist: {cwd}")
+        limit = max(1.0, min(float(args.get("timeout_ms", timeout * 1000)), 120000.0) / 1000.0)
+        if sys.platform == "win32":
+            # Explicitly use cmd.exe so Windows commands (dir, copy, set, &&)
+            # behave the same when Python is launched from start.bat or a GUI.
+            shell_command = [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c", command]
+        else:
+            shell_command = ["/bin/sh", "-lc", command]
+        completed = subprocess.run(shell_command, cwd=cwd, shell=False, capture_output=True,
+                                   text=True, encoding="utf-8", errors="replace", timeout=limit)
+        out = (completed.stdout or "") + ("\n[stderr]\n" + completed.stderr if completed.stderr else "")
+        return f"exit_code: {completed.returncode}\ncwd: {cwd}\n{out}"[-200000:]
+    if name == "terminal_list_dir":
+        path = _terminal_path(args.get("path"))
+        if not os.path.isdir(path):
+            raise FileNotFoundError(path)
+        rows = []
+        for item in sorted(os.scandir(path), key=lambda x: (not x.is_dir(), x.name.lower())):
+            rows.append(("[DIR] " if item.is_dir() else "      ") + item.name)
+        return "path: " + path + "\n" + "\n".join(rows[:500])
+    if name == "terminal_read_file":
+        path = _terminal_path(args.get("path"))
+        limit = max(1, min(int(args.get("max_chars", 200000)), 2000000))
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            return fh.read(limit)
+    if name == "terminal_write_file":
+        path = _terminal_path(args.get("path"))
+        content = str(args.get("content", ""))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8", newline="") as fh:
+            fh.write(content)
+        return f"written {len(content)} chars to {path}"
+    raise RuntimeError(f"unknown terminal tool '{name}'")
 
 if _enable_ansi_colors():
     C = {
@@ -1174,6 +1235,10 @@ class MCPManager:
 mgr = MCPManager()
 clients = set()
 
+def visible_tools():
+    """Return only tools for the active target so the model cannot mix modes."""
+    return list(TERMINAL_TOOLS) if RUN_MODE == "terminal" else mgr.list_tools()
+
 # ── Studio connectivity probe ──────────────────────────────────────────────
 # The MCP server process stays alive even when Roblox Studio is closed or its
 # MCP option is disabled - tool calls then return instantly with an "Unable to
@@ -1265,6 +1330,8 @@ def probe_studio():
 def safe_call(name, arguments, timeout):
     """Never raises. Always returns a dict the extension can feed back to DeepSeek."""
     try:
+        if RUN_MODE == "terminal" and name in TERMINAL_TOOL_NAMES:
+            return {"ok": True, "text": _terminal_call(name, arguments or {}, timeout), "images": []}
         result = mgr.call(name, arguments, timeout)
         return {"ok": True, "text": result["text"], "images": result["images"]}
     except TimeoutError as e:
@@ -1319,6 +1386,7 @@ async def broadcast_status():
         _proc = await asyncio.to_thread(_roblox_studio_app_running)
         payload = json.dumps({
             "type": "connected",
+            "mode": RUN_MODE,
             "mcp_alive": mgr.any_alive(),
             "studio": _st["place"], "studio_app": _st["app"],
             # Whether a Roblox Studio WINDOW process exists at all - lets the
@@ -1326,7 +1394,7 @@ async def broadcast_status():
             # panel in your already-open Studio" vs "launch Studio").
             "studio_proc": _proc,
             "servers": mgr.health(),
-            "tools": mgr.list_tools(),
+            "tools": visible_tools(),
             "port": PORT,
         })
     except Exception:
@@ -1339,6 +1407,7 @@ async def broadcast_status():
 
 
 async def handler(ws):
+    global RUN_MODE
     peer = getattr(ws, "remote_address", ("?",))[0]
     clients.add(ws)
     log(f"extension connected  ({peer})  [{len(clients)} client(s)]", "gr")
@@ -1346,11 +1415,12 @@ async def handler(ws):
         _st = await asyncio.to_thread(probe_studio)
         await ws.send(json.dumps({
             "type": "connected",
+            "mode": RUN_MODE,
             "mcp_alive": mgr.any_alive(),
             "studio": _st["place"], "studio_app": _st["app"],
             "studio_proc": await asyncio.to_thread(_roblox_studio_app_running),
             "servers": mgr.health(),
-            "tools": mgr.list_tools(),
+            "tools": visible_tools(),
             "port": PORT,
         }))
         async for raw in ws:
@@ -1367,7 +1437,7 @@ async def handler(ws):
             elif mtype == "studio_status":
                 studio = await asyncio.to_thread(probe_studio)
                 await ws.send(json.dumps({
-                    "type": "studio_status", "id": rid,
+                    "type": "studio_status", "id": rid, "mode": RUN_MODE,
                     "studio": studio["place"], "studio_app": studio["app"],
                     "studio_proc": await asyncio.to_thread(_roblox_studio_app_running),
                     "mcp_alive": mgr.any_alive(),
@@ -1375,9 +1445,9 @@ async def handler(ws):
 
             elif mtype == "list_tools":
                 try:
-                    tools = await asyncio.to_thread(mgr.list_tools, True)
+                    tools = TERMINAL_TOOLS if RUN_MODE == "terminal" else await asyncio.to_thread(mgr.list_tools, True)
                 except Exception as e:
-                    tools = mgr.list_tools()
+                    tools = visible_tools()
                     log(f"list_tools error: {e}", "yl")
                 _st = await asyncio.to_thread(probe_studio)
                 await ws.send(json.dumps({
@@ -1439,8 +1509,18 @@ async def handler(ws):
                 await ws.send(json.dumps({
                     "type": "mcp_status", "id": rid,
                     "alive": mgr.any_alive(), "ok": ok, "error": err,
-                    "servers": mgr.health(), "tools": mgr.list_tools(),
+                    "servers": mgr.health(), "tools": visible_tools(), "mode": RUN_MODE,
                 }))
+
+            elif mtype == "set_mode":
+                requested = str(msg.get("mode", "")).strip().lower()
+                if requested not in {"roblox", "terminal"}:
+                    await ws.send(json.dumps({"type": "mode_status", "id": rid, "ok": False, "mode": RUN_MODE, "error": "mode must be roblox or terminal"}))
+                else:
+                    RUN_MODE = requested
+                    log(f"target mode changed to {RUN_MODE}", "cy")
+                    await ws.send(json.dumps({"type": "mode_status", "id": rid, "ok": True, "mode": RUN_MODE}))
+                    await broadcast_status()
 
             else:
                 await ws.send(json.dumps({
@@ -1856,6 +1936,10 @@ async def main():
         Blender) right away - only the terminal banner and Roblox's own
         auto-recovery loop wait on this. (mgr.start_all() itself also
         launches every server in parallel now, for the same reason.)"""
+        if RUN_MODE == "terminal":
+            log("terminal mode ready - Roblox MCP is not started", "gr")
+            await broadcast_status()
+            return
         try:
             await asyncio.to_thread(mgr.start_all)
         except Exception as e:
@@ -2023,9 +2107,11 @@ async def main():
 
     async with server_ctx:
         log(f"listening on ws://{HOST}:{PORT}  - load the extension and open a supported AI chat", "cy")
-        asyncio.create_task(_supervised("server_watch", server_watch))
+        if RUN_MODE != "terminal":
+            asyncio.create_task(_supervised("server_watch", server_watch))
         asyncio.create_task(_boot_and_diagnose())
-        asyncio.create_task(_early_studio_guidance())
+        if RUN_MODE != "terminal":
+            asyncio.create_task(_early_studio_guidance())
         asyncio.create_task(_early_status_pushes())
         await asyncio.Future()  # run forever
 
