@@ -65,6 +65,7 @@ let toolsCache = [];
 let mcpAlive = false;
 let serversCache = [];
 let targetMode = "roblox";
+let godotProjectPath = "";
 // true/false = a PLACE is loaded and usable in Roblox Studio; null = unknown.
 // The MCP process stays alive when Studio is closed or its MCP option is off,
 // so this is probed separately (bridge "studio_status").
@@ -238,7 +239,8 @@ async function refreshStudioStatus() {
 }
 
 function handleBridgeMessage(msg) {
-  if (msg.mode === "terminal" || msg.mode === "roblox") targetMode = msg.mode;
+  if (["terminal", "roblox", "godot"].includes(msg.mode)) targetMode = msg.mode;
+  if (typeof msg.project_path === "string") godotProjectPath = msg.project_path;
   if ("studio" in msg && (typeof msg.studio === "boolean" || msg.studio === null)) {
     studioConnected = msg.studio;
   }
@@ -254,7 +256,7 @@ function handleBridgeMessage(msg) {
     return;
   }
   if (msg.type === "connected") {
-    if (msg.mode === "terminal" || msg.mode === "roblox") targetMode = msg.mode;
+    if (["terminal", "roblox", "godot"].includes(msg.mode)) targetMode = msg.mode;
     mcpAlive = !!msg.mcp_alive;
     if (Array.isArray(msg.tools)) toolsCache = msg.tools;
     if (Array.isArray(msg.servers)) serversCache = msg.servers;
@@ -280,7 +282,7 @@ function handleBridgeMessage(msg) {
     return;
   }
   if (msg.type === "mcp_status") {
-    if (msg.mode === "terminal" || msg.mode === "roblox") targetMode = msg.mode;
+    if (["terminal", "roblox", "godot"].includes(msg.mode)) targetMode = msg.mode;
     mcpAlive = !!msg.alive;
     if (Array.isArray(msg.tools)) toolsCache = msg.tools;
     if (Array.isArray(msg.servers)) serversCache = msg.servers;
@@ -296,8 +298,14 @@ function handleBridgeMessage(msg) {
     return;
   }
   if (msg.type === "mode_status") {
-    if (msg.mode === "terminal" || msg.mode === "roblox") targetMode = msg.mode;
+    if (["terminal", "roblox", "godot"].includes(msg.mode)) targetMode = msg.mode;
     resolvePending(msg.id, { ok: !!msg.ok, mode: targetMode, error: msg.error });
+    broadcastStatus();
+    return;
+  }
+  if (msg.type === "godot_project") {
+    if (msg.ok && typeof msg.path === "string") godotProjectPath = msg.path;
+    resolvePending(msg.id, { ok: !!msg.ok, path: msg.path, cancelled: msg.cancelled, error: msg.error });
     broadcastStatus();
     return;
   }
@@ -325,7 +333,7 @@ function failAllPending(reason) {
 
 // ── status push to any open DeepSeek tab + popup ─────────────────────────
 function statusObj() {
-  return { type: "zs-status", connected, mcpAlive, mode: targetMode, studio: studioConnected, studioApp, studioProc, tools: toolsCache.length, servers: serversCache };
+  return { type: "zs-status", connected, mcpAlive, mode: targetMode, projectPath: godotProjectPath, studio: studioConnected, studioApp, studioProc, tools: toolsCache.length, servers: serversCache };
 }
 
 function broadcastStatus() {
@@ -369,10 +377,22 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         break;
       }
       case "set_mode": {
-        const mode = msg.mode === "terminal" ? "terminal" : "roblox";
-        const r = await send({ type: "set_mode", mode }, 10000);
+        const mode = ["terminal", "godot"].includes(msg.mode) ? msg.mode : "roblox";
+        const projectPath = typeof msg.project_path === "string" ? msg.project_path : godotProjectPath;
+        const r = await send({ type: "set_mode", mode, project_path: projectPath }, 10000);
         if (r && r.ok) targetMode = mode;
         sendResponse({ ...r, mode: targetMode });
+        broadcastStatus();
+        break;
+      }
+      case "browse_godot_project": {
+        const r = await send({ type: "browse_godot_project" }, 120000);
+        if (r && r.ok && r.path) {
+          godotProjectPath = r.path;
+          await send({ type: "set_mode", mode: "godot", project_path: r.path }, 10000);
+          targetMode = "godot";
+        }
+        sendResponse({ ...r, mode: targetMode, projectPath: godotProjectPath });
         broadcastStatus();
         break;
       }

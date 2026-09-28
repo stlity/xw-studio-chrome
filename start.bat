@@ -12,9 +12,11 @@ echo.
 echo   Select XW Studio target:
 echo     [Y] Roblox Studio agent
 echo     [N] Terminal agent
+echo     [G] Godot Engine agent
 echo.
 :choose_mode
-choice /C YN /N /M "  Start Roblox mode? [Y/N]: "
+choice /C YNG /N /M "  Select target [Y/N/G]: "
+if errorlevel 3 goto godot_mode
 if errorlevel 2 goto terminal_mode
 if errorlevel 1 goto roblox_mode
 goto choose_mode
@@ -27,6 +29,11 @@ goto mode_selected
 set "XW_MODE=terminal"
 echo         Mode: Terminal
 call :log "Target mode: terminal"
+goto mode_selected
+:godot_mode
+set "XW_MODE=godot"
+echo         Mode: Godot Engine
+call :log "Target mode: godot"
 :mode_selected
 echo.
 REM Log the Windows build once per launch - most support requests arrive as a

@@ -23,10 +23,12 @@ import json
 import os
 import platform
 import queue
+import shutil
 import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 
 try:
     # Sibling script (same folder as bridge.py, which Python puts on sys.path
@@ -84,9 +86,10 @@ CONFIG_PATH = os.path.join(HERE, "config.json")
 # never be edited/removed through the extension (it is what XW Studio is FOR).
 PRIMARY_SERVER_ID = "roblox"
 RUN_MODE = os.environ.get("XW_MODE", "roblox").strip().lower()
-if RUN_MODE not in {"roblox", "terminal"}:
+if RUN_MODE not in {"roblox", "terminal", "godot"}:
     RUN_MODE = "roblox"
 PLATFORM_NAME = platform.system().lower()
+GODOT_PROJECT_PATH = os.environ.get("XW_GODOT_PROJECT", "").strip()
 
 TERMINAL_TOOLS = [
     {"name": "terminal_exec", "description": "Run a local shell command and return stdout/stderr. Use only for the user's requested work.", "inputSchema": {"type": "object", "properties": {"command": {"type": "string"}, "cwd": {"type": "string"}, "timeout_ms": {"type": "integer", "minimum": 1000, "maximum": 120000}}, "required": ["command"]}},
@@ -96,6 +99,114 @@ TERMINAL_TOOLS = [
 ]
 TERMINAL_TOOL_NAMES = {x["name"] for x in TERMINAL_TOOLS}
 BLOCKED_TERMINAL = ("format c:", "format c ", "shutdown /", "shutdown -", "rm -rf /", "mkfs", "del /s /q c:/", "rd /s /q c:/", "diskpart")
+
+GODOT_TOOLS = [
+    {"name": "godot_list_project", "description": "List the Godot project tree and project metadata.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string", "description": "Godot project folder; defaults to the selected folder."}}, "required": []}},
+    {"name": "godot_read_file", "description": "Read a UTF-8 text file inside the selected Godot project.", "inputSchema": {"type": "object", "properties": {"file": {"type": "string", "description": "File path relative to the project, e.g. scripts/player.gd."}, "project_path": {"type": "string"}, "max_chars": {"type": "integer", "minimum": 1, "maximum": 2000000}}, "required": ["file"]}},
+    {"name": "godot_write_file", "description": "Write a UTF-8 text scene, resource or script inside the selected Godot project.", "inputSchema": {"type": "object", "properties": {"file": {"type": "string"}, "project_path": {"type": "string"}, "content": {"type": "string"}}, "required": ["file", "content"]}},
+    {"name": "godot_check_project", "description": "Run Godot headless to import and validate the selected project without starting a game window.", "inputSchema": {"type": "object", "properties": {"project_path": {"type": "string"}, "timeout_ms": {"type": "integer", "minimum": 1000, "maximum": 120000}}, "required": []}},
+    {"name": "godot_run_scene", "description": "Run a Godot scene headlessly for a short bounded test and return its output.", "inputSchema": {"type": "object", "properties": {"scene": {"type": "string", "description": "Scene path relative to the project, e.g. res://main.tscn or main.tscn."}, "project_path": {"type": "string"}, "seconds": {"type": "integer", "minimum": 1, "maximum": 30}}, "required": ["scene"]}},
+]
+GODOT_TOOL_NAMES = {x["name"] for x in GODOT_TOOLS}
+
+def _godot_binary():
+    override = os.environ.get("XW_GODOT_BIN", "").strip()
+    if override and os.path.isfile(override):
+        return override
+    for name in ("godot", "godot4", "Godot", "Godot_v4.0-stable_win64.exe"):
+        found = shutil.which(name)
+        if found:
+            return found
+    raise FileNotFoundError("Godot executable was not found. Install Godot or set XW_GODOT_BIN.")
+
+def _godot_root(value=None):
+    raw = str(value or GODOT_PROJECT_PATH or "").strip()
+    if not raw:
+        raise ValueError("No Godot project is selected. Choose a project folder in the XW Studio popup.")
+    root = os.path.abspath(os.path.expandvars(os.path.expanduser(raw)))
+    if not os.path.isdir(root):
+        raise FileNotFoundError(f"Godot project folder does not exist: {root}")
+    if not os.path.isfile(os.path.join(root, "project.godot")):
+        raise ValueError(f"Not a Godot project (project.godot missing): {root}")
+    return root
+
+def _godot_file(root, value):
+    raw = str(value or "").strip()
+    if raw.startswith("res://"):
+        raw = raw[6:]
+    candidate = os.path.abspath(os.path.join(root, raw))
+    if os.path.commonpath([root, candidate]) != root:
+        raise PermissionError("Godot file path must stay inside the selected project")
+    return candidate
+
+def _godot_call(name, args, timeout):
+    project_arg = args.get("project_path")
+    if name == "godot_list_project" and args.get("path"):
+        project_arg = args.get("path")
+    root = _godot_root(project_arg)
+    if name == "godot_list_project":
+        rows = []
+        ignored = {".git", ".godot", ".import", ".mono", "bin", "obj", "logs"}
+        for base, dirs, files in os.walk(root):
+            dirs[:] = sorted(d for d in dirs if d not in ignored and not d.startswith("."))
+            rel = os.path.relpath(base, root)
+            for filename in sorted(files):
+                if filename.startswith(".") and filename not in {".gitattributes"}:
+                    continue
+                item = os.path.normpath(os.path.join(rel, filename)) if rel != "." else filename
+                rows.append(item.replace(os.sep, "/"))
+                if len(rows) >= 2000:
+                    break
+            if len(rows) >= 2000:
+                break
+        project = Path(root, "project.godot").read_text(encoding="utf-8", errors="replace")[:20000]
+        title = next((line.split("=", 1)[1].strip().strip('"') for line in project.splitlines() if line.startswith("config/name")), "Godot project")
+        return f"project: {title}\nroot: {root}\nfiles ({len(rows)}):\n" + "\n".join(rows)
+    if name == "godot_read_file":
+        path = _godot_file(root, args.get("file") or args.get("path"))
+        limit = max(1, min(int(args.get("max_chars", 200000)), 2000000))
+        return Path(path).read_text(encoding="utf-8", errors="replace")[:limit]
+    if name == "godot_write_file":
+        path = _godot_file(root, args.get("file") or args.get("path"))
+        content = str(args.get("content", ""))
+        if os.path.splitext(path)[1].lower() not in {".gd", ".gdshader", ".shader", ".tscn", ".tres", ".godot", ".cfg", ".json", ".md", ".txt", ".csv"}:
+            raise PermissionError("Godot write is limited to text project, scene, resource and script files")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        Path(path).write_text(content, encoding="utf-8", newline="")
+        return f"written {len(content)} chars to {path}"
+    binary = _godot_binary()
+    timeout_s = max(1.0, min(float(args.get("timeout_ms", timeout * 1000)), 120000.0) / 1000.0)
+    if name == "godot_check_project":
+        command = [binary, "--headless", "--path", root, "--editor", "--quit"]
+    elif name == "godot_run_scene":
+        scene = str(args.get("scene", "")).strip()
+        if scene.startswith("res://"):
+            scene = scene[6:]
+        scene_path = _godot_file(root, scene)
+        if not os.path.isfile(scene_path) or not scene_path.lower().endswith(".tscn"):
+            raise FileNotFoundError(f"Godot scene not found: {scene}")
+        seconds = max(1, min(int(args.get("seconds", 3)), 30))
+        command = [binary, "--headless", "--path", root, "--audio-driver", "Dummy", "--quit-after", str(seconds), scene]
+        timeout_s = min(timeout_s, seconds + 15)
+    else:
+        raise RuntimeError(f"unknown Godot tool '{name}'")
+    completed = subprocess.run(command, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout_s)
+    out = (completed.stdout or "") + ("\n[stderr]\n" + completed.stderr if completed.stderr else "")
+    return f"exit_code: {completed.returncode}\nproject: {root}\n{out}"[-300000:]
+
+def _browse_godot_project():
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk(); root.withdraw(); root.attributes("-topmost", True)
+        selected = filedialog.askdirectory(title="Select Godot project folder")
+        root.destroy()
+        if not selected:
+            return {"ok": False, "cancelled": True}
+        _godot_root(selected)
+        return {"ok": True, "path": os.path.abspath(selected)}
+    except Exception as e:
+        return {"ok": False, "error": f"Could not open the native folder picker: {e}"}
 
 def _terminal_path(value):
     return os.path.abspath(os.path.expandvars(os.path.expanduser(str(value or "."))))
@@ -1237,7 +1348,11 @@ clients = set()
 
 def visible_tools():
     """Return only tools for the active target so the model cannot mix modes."""
-    return list(TERMINAL_TOOLS) if RUN_MODE == "terminal" else mgr.list_tools()
+    if RUN_MODE == "terminal":
+        return list(TERMINAL_TOOLS)
+    if RUN_MODE == "godot":
+        return list(GODOT_TOOLS)
+    return mgr.list_tools()
 
 # ── Studio connectivity probe ──────────────────────────────────────────────
 # The MCP server process stays alive even when Roblox Studio is closed or its
@@ -1332,6 +1447,8 @@ def safe_call(name, arguments, timeout):
     try:
         if RUN_MODE == "terminal" and name in TERMINAL_TOOL_NAMES:
             return {"ok": True, "text": _terminal_call(name, arguments or {}, timeout), "images": []}
+        if RUN_MODE == "godot" and name in GODOT_TOOL_NAMES:
+            return {"ok": True, "text": _godot_call(name, arguments or {}, timeout), "images": []}
         result = mgr.call(name, arguments, timeout)
         return {"ok": True, "text": result["text"], "images": result["images"]}
     except TimeoutError as e:
@@ -1396,6 +1513,7 @@ async def broadcast_status():
             "servers": mgr.health(),
             "tools": visible_tools(),
             "port": PORT,
+            "project_path": GODOT_PROJECT_PATH,
         })
     except Exception:
         return
@@ -1407,7 +1525,7 @@ async def broadcast_status():
 
 
 async def handler(ws):
-    global RUN_MODE
+    global RUN_MODE, GODOT_PROJECT_PATH
     peer = getattr(ws, "remote_address", ("?",))[0]
     clients.add(ws)
     log(f"extension connected  ({peer})  [{len(clients)} client(s)]", "gr")
@@ -1422,6 +1540,7 @@ async def handler(ws):
             "servers": mgr.health(),
             "tools": visible_tools(),
             "port": PORT,
+            "project_path": GODOT_PROJECT_PATH,
         }))
         async for raw in ws:
             try:
@@ -1445,7 +1564,7 @@ async def handler(ws):
 
             elif mtype == "list_tools":
                 try:
-                    tools = TERMINAL_TOOLS if RUN_MODE == "terminal" else await asyncio.to_thread(mgr.list_tools, True)
+                    tools = visible_tools() if RUN_MODE in {"terminal", "godot"} else await asyncio.to_thread(mgr.list_tools, True)
                 except Exception as e:
                     tools = visible_tools()
                     log(f"list_tools error: {e}", "yl")
@@ -1456,7 +1575,14 @@ async def handler(ws):
                     "studio": _st["place"], "studio_app": _st["app"],
                     "studio_proc": await asyncio.to_thread(_roblox_studio_app_running),
                     "servers": mgr.health(),
+                    "mode": RUN_MODE, "project_path": GODOT_PROJECT_PATH,
                 }))
+
+            elif mtype == "browse_godot_project":
+                result = await asyncio.to_thread(_browse_godot_project)
+                if result.get("ok"):
+                    GODOT_PROJECT_PATH = result["path"]
+                await ws.send(json.dumps({"type": "godot_project", "id": rid, **result}))
 
             elif mtype == "call_tool":
                 name = msg.get("name", "")
@@ -1514,10 +1640,12 @@ async def handler(ws):
 
             elif mtype == "set_mode":
                 requested = str(msg.get("mode", "")).strip().lower()
-                if requested not in {"roblox", "terminal"}:
-                    await ws.send(json.dumps({"type": "mode_status", "id": rid, "ok": False, "mode": RUN_MODE, "error": "mode must be roblox or terminal"}))
+                if requested not in {"roblox", "terminal", "godot"}:
+                    await ws.send(json.dumps({"type": "mode_status", "id": rid, "ok": False, "mode": RUN_MODE, "error": "mode must be roblox, terminal or godot"}))
                 else:
                     RUN_MODE = requested
+                    if requested == "godot" and msg.get("project_path"):
+                        GODOT_PROJECT_PATH = str(msg.get("project_path")).strip()
                     log(f"target mode changed to {RUN_MODE}", "cy")
                     await ws.send(json.dumps({"type": "mode_status", "id": rid, "ok": True, "mode": RUN_MODE}))
                     await broadcast_status()
@@ -1936,8 +2064,8 @@ async def main():
         Blender) right away - only the terminal banner and Roblox's own
         auto-recovery loop wait on this. (mgr.start_all() itself also
         launches every server in parallel now, for the same reason.)"""
-        if RUN_MODE == "terminal":
-            log("terminal mode ready - Roblox MCP is not started", "gr")
+        if RUN_MODE in {"terminal", "godot"}:
+            log(f"{RUN_MODE} mode ready - Roblox MCP is not started", "gr")
             await broadcast_status()
             return
         try:
@@ -2107,10 +2235,10 @@ async def main():
 
     async with server_ctx:
         log(f"listening on ws://{HOST}:{PORT}  - load the extension and open a supported AI chat", "cy")
-        if RUN_MODE != "terminal":
+        if RUN_MODE == "roblox":
             asyncio.create_task(_supervised("server_watch", server_watch))
         asyncio.create_task(_boot_and_diagnose())
-        if RUN_MODE != "terminal":
+        if RUN_MODE == "roblox":
             asyncio.create_task(_early_studio_guidance())
         asyncio.create_task(_early_status_pushes())
         await asyncio.Future()  # run forever

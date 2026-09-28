@@ -1,10 +1,10 @@
-# XW Studio for Chrome - Free AI Agent for Roblox Studio
+# XW Studio for Chrome - Free AI Agent for Roblox, Godot and Terminal
 
 
-**XW Studio** is a free browser extension that turns supported AI chats into a Roblox Studio or local Terminal agent.
-Use the popup to switch between Roblox and Terminal mode. In Terminal mode the agent can inspect folders, read/write project files and run local commands through the bridge. No API key is required.
+**XW Studio** is a free browser extension that turns supported AI chats into a Roblox Studio, Godot Engine or local Terminal agent.
+Use the popup to switch between Roblox, Godot and Terminal modes. Godot mode can inspect a selected project, read and write GDScript/scenes/resources, validate the project headlessly and run bounded scene checks through the bridge. No API key is required.
 
-## XW Studio 1.7 — multi-agent settings
+## XW Studio 1.0 — multi-agent settings
 
 Click **Settings** in the extension popup to open a dedicated tab. Enable the team, choose a workflow and safety mode, then assign any supported AI to six roles: **Designer, Builder, Debugger, Security reviewer, QA tester, and Producer / architect**. The profile is stored locally and added to the active chat's system prompt. Plan preview and automatic Output-driven debugging are opt-in controls in the same page.
 
@@ -24,10 +24,10 @@ If you come across a site or extension using the XW Studio name that asks for pa
 ## How it works
 
 ```
-AI chat (supported site, in your browser) -> XW Studio Extension -> Bridge (your PC) -> Roblox Studio or Terminal
+AI chat (supported site, in your browser) -> XW Studio Extension -> Bridge (your PC) -> Roblox Studio, Godot or Terminal
 ```
 
-The extension runs inside a supported chat page. In Roblox mode it sends commands to Roblox Studio through the built-in MCP server. In Terminal mode it exposes local file and shell tools through the Bridge.
+The extension runs inside a supported chat page. In Roblox mode it sends commands to Roblox Studio through the built-in MCP server. In Godot mode it works with a selected folder containing `project.godot` and uses the installed Godot CLI for validation and bounded tests. In Terminal mode it exposes local file and shell tools through the Bridge.
 
 ## Setup
 
@@ -57,12 +57,14 @@ Open Studio and load a Place, then enable MCP (first time only):
 
 ### 3. Choose a target and run the Bridge
 
-On Windows, run `start.bat` and press **Y** for Roblox Studio or **N** for Terminal. The choice is also available later in the extension popup.
+On Windows, run `start.bat` and press **Y** for Roblox Studio, **G** for Godot Engine or **N** for Terminal. The choice is also available later in the extension popup.
 
 - **Windows:** double-click `start.bat` inside the extracted folder.
 - **macOS:** double-click `MacOS_Start.command` inside the extracted folder. The first time, macOS will show a security warning ("could not verify... free of malware") - this is normal for any script downloaded outside the App Store, click **Done**, then go to **System Settings > Privacy & Security**, scroll to the bottom, and click **Open Anyway**. You only need to do this once.
 
 A small window opens, that means the Bridge is running.
+
+For Godot mode, open the XW Studio popup, choose **Godot**, press **Обзор**, and select the folder containing `project.godot`. The bridge uses the installed `godot`, `godot4` or `Godot` executable; set `XW_GODOT_BIN` if it is not on PATH.
 
 ### 4. Start a session
 

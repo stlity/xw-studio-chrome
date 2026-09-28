@@ -105,6 +105,8 @@
     { name: "Duck.ai", url: "https://duck.ai/" },
     { name: "Meta AI", url: "https://www.meta.ai/" },
   ];
+  const modeLabel = (mode) => mode === "godot" ? "Godot" : mode === "terminal" ? "Terminal" : "Roblox Studio";
+  const isLocalMode = (mode) => mode === "godot" || mode === "terminal";
 
   const A = {
     running: false,
@@ -935,9 +937,10 @@
     // if the model explicitly asks via {"server": "<id>"} (see list_mcp_servers).
     if (name === "list_commands" || name === "list_tools") {
       await ensureTools();
-      if (A.bridge && A.bridge.mode === "terminal") {
-        const lines = A.toolList.map((t) => `${t.name}: ${t.description || "terminal tool"}`);
-        return `Output of '${name}':\nTerminal tools available:\n${lines.join("\n")}`;
+      if (A.bridge && isLocalMode(A.bridge.mode)) {
+        const label = modeLabel(A.bridge.mode);
+        const lines = A.toolList.map((t) => `${t.name}: ${t.description || `${label} tool`}`);
+        return `Output of '${name}':\n${label} tools available${A.bridge.projectPath ? ` for ${A.bridge.projectPath}` : ""}:\n${lines.join("\n")}`;
       }
       const requested = (args.server || "roblox").trim();
       // The MCP proxy keeps advertising Roblox's catalogue even with no Studio
@@ -1648,6 +1651,7 @@
       providerNotes: P.promptExtra || "",
       multiAgentConfig,
       targetMode: A.bridge.mode || "roblox",
+      projectPath: A.bridge.projectPath || "",
     });
   }
 
@@ -1846,7 +1850,7 @@
       if (!alive()) return;
       if (!A.toolList.length) {
         ui.banner("warn", "Bridge or target offline",
-          A.bridge.mode === "terminal" ? "Could not fetch terminal tools. Run start.bat and try again." : "Could not fetch Roblox tools. Run start.bat and make sure Roblox Studio is open, then try again.");
+          A.bridge.mode === "terminal" ? "Could not fetch terminal tools. Run start.bat and try again." : A.bridge.mode === "godot" ? "Could not fetch Godot tools. Select a folder containing project.godot, then try again." : "Could not fetch Roblox tools. Run start.bat and make sure Roblox Studio is open, then try again.");
         return;
       }
       const modeState = await P.ensureComposerReady("startup");
@@ -1872,14 +1876,15 @@
       // Do not mark that as a ready agent: send one concise recovery turn that
       // explicitly requires the first executable XW command.
       let handshakeRes = startRes;
-      const startupTool = A.bridge.mode === "terminal" ? "terminal_list_dir" : "list_commands";
+      const startupTool = A.bridge.mode === "terminal" ? "terminal_list_dir" : A.bridge.mode === "godot" ? "godot_list_project" : "list_commands";
       const isCommandHandshake = (r) => {
         const n = r && r.calls && r.calls[0] && r.calls[0].tool;
         return r && r.kind === "tool" && r.calls.length === 1 &&
           (n === startupTool || n === "list_tools");
       };
       if (!isCommandHandshake(handshakeRes)) {
-        const recovery = `XW STARTUP RECOVERY: your previous reply did not execute the required startup command. Do not explain or ask for manual steps. Send exactly one fenced JSON command now:\n\`\`\`json\n${A.bridge.mode === "terminal" ? '{"command":"terminal_list_dir","params":{"path":"."}}' : '{"command":"list_commands"}'}\n\`\`\`\nThen wait for its result and reply only that you are ready.`;
+        const recoveryCommand = A.bridge.mode === "terminal" ? '{"command":"terminal_list_dir","params":{"path":"."}}' : A.bridge.mode === "godot" ? '{"command":"godot_list_project","params":{}}' : '{"command":"list_commands"}';
+        const recovery = `XW STARTUP RECOVERY: your previous reply did not execute the required startup command. Do not explain or ask for manual steps. Send exactly one fenced JSON command now:\n\`\`\`json\n${recoveryCommand}\n\`\`\`\nThen wait for its result and reply only that you are ready.`;
         const recoveryBase = await submitAndGetBase(recovery);
         handshakeRes = await waitForResponse(recoveryBase);
       }
@@ -1896,7 +1901,7 @@
         // (the bridge keeps advertising Roblox's catalogue even with no Studio
         // attached, so A.toolList still has 25+ entries that were never actually
         // usable this boot).
-        if (A.bridge.mode !== "terminal" && /Roblox Studio is currently OFFLINE/.test(toolFeedback)) {
+        if (A.bridge.mode === "roblox" && /Roblox Studio is currently OFFLINE/.test(toolFeedback)) {
           decorate.toolBox(startRes.item, "Loading commands", "err", "Roblox offline", true);
         } else {
           // Count what the model ACTUALLY received: list_commands is scoped to the
@@ -1904,7 +1909,7 @@
           // connected server merged - Roblox + Blender + addons) overstated the boot
           // count and made it look like all servers were loaded at once. Count the
           // Roblox-scoped tools instead, matching the real result.
-          const commandCount = A.bridge.mode === "terminal"
+          const commandCount = isLocalMode(A.bridge.mode)
             ? A.toolList.length
             : A.toolList.filter((t) => (t.server || "roblox") === "roblox").length;
           decorate.toolBox(startRes.item, "Loading commands", "done", `${commandCount} commands`, true);
@@ -1917,7 +1922,7 @@
       A.started = true;
       rememberSession(P.conversationKey()); // survives virtualization AND reloads
       ui.setStarted(true);
-      ui.toast(`Agent ready. Ask ${P.displayName} to work in ${A.bridge.mode === "terminal" ? "Terminal" : "Roblox Studio"}.`);
+      ui.toast(`Agent ready. Ask ${P.displayName} to work in ${modeLabel(A.bridge.mode)}.`);
     } catch (e) {
       if (alive()) ui.banner("warn", "Startup failed", String((e && e.message) || e));
     } finally {
@@ -2980,7 +2985,7 @@
       else if (A.starting) {
         toneClass = "starting";
         indicator = `<span class="zs-spin"></span>`;
-        msg = `Starting the ${A.bridge.mode === "terminal" ? "Terminal" : "Roblox"} agent…`;
+        msg = `Starting the ${modeLabel(A.bridge.mode)} agent…`;
         label = "Starting…"; kind = "starting"; disabled = true;
       } else if (A.started) {
         // Prefer the ADVERTISED list length (A.toolList - the AGGREGATE catalogue
@@ -2998,10 +3003,15 @@
         // bridge.py), so showing it while Studio/place isn't actually usable
         // reads as "everything's fine" when tool calls will just fail. Surface
         // the real blocker instead in that case.
-        if (A.bridge && A.bridge.mode === "terminal") {
+        if (A.bridge && isLocalMode(A.bridge.mode)) {
           toneClass = A.bridge.connected ? "active" : "warn";
           warn = !A.bridge.connected;
-          msg = A.bridge.connected ? `<b>Terminal agent active</b>${tools ? ` · ${tools} tools` : ""}` : `<b>Terminal agent</b> · bridge offline, run start.bat`;
+          const targetReady = A.bridge.mode !== "godot" || !!A.bridge.projectPath;
+          toneClass = A.bridge.connected && targetReady ? "active" : "warn";
+          warn = !(A.bridge.connected && targetReady);
+          msg = A.bridge.connected
+            ? targetReady ? `<b>${modeLabel(A.bridge.mode)} agent active</b>${tools ? ` · ${tools} tools` : ""}` : `<b>Godot agent</b> · choose a project folder`
+            : `<b>${modeLabel(A.bridge.mode)} agent</b> · bridge offline, run start.bat`;
         } else if (A.bridge && A.bridge.connected === false) {
           // placeDown/appDown/studioDown are all false in this case (they're
           // only computed when the bridge IS connected - see setStatus), so
@@ -3045,7 +3055,7 @@
         if (bridgeOk) {
           toneClass = "standby";
           msg = `Standby. Start the agent, or just chat.`;
-          label = `▶︎ Start ${A.bridge.mode === "terminal" ? "Terminal" : "Roblox"} agent`; kind = "start";
+          label = `▶︎ Start ${modeLabel(A.bridge.mode)} agent`; kind = "start";
         } else if (addonOk) {
           // Roblox is down but another MCP server is live: allow a DEGRADED start
           // (yellow). The agent runs on the other server(s); Roblox tools stay
@@ -3070,7 +3080,7 @@
                   : studioDown
                     ? `Open <b>Roblox Studio</b> &amp; enable its MCP server.`
                     : `Open <b>Roblox Studio</b> for the tools.`;
-          label = `▶︎ Start ${A.bridge.mode === "terminal" ? "Terminal" : "Roblox"} agent`; kind = "start";
+          label = `▶︎ Start ${modeLabel(A.bridge.mode)} agent`; kind = "start";
         }
         disabled = !bridgeOk && !addonOk;
       } else {
@@ -3139,10 +3149,10 @@
     function setStatus(s) {
       A.bridge = s;
       if (!dot) return;
-      if (s.mode === "terminal") {
-        const ready = !!s.connected;
+      if (isLocalMode(s.mode)) {
+        const ready = !!s.connected && (s.mode !== "godot" || !!s.projectPath);
         dot.className = ready ? "on" : "off";
-        dot.title = ready ? "Terminal bridge connected" : "Bridge offline, run start.bat";
+        dot.title = ready ? `${modeLabel(s.mode)} bridge connected` : s.mode === "godot" && s.connected ? "Select a Godot project folder" : "Bridge offline, run start.bat";
         bridgeOk = ready;
         studioDown = false;
         placeDown = false;

@@ -191,8 +191,9 @@ const ZS = (() => {
 
   function buildSystemPrompt(opts = {}) {
     if (typeof opts === "string") opts = { siteName: opts };
-    const { siteName = "this AI site", customPrompt = "", providerNotes = "", multiAgentConfig = null, targetMode = "roblox" } = opts;
+    const { siteName = "this AI site", customPrompt = "", providerNotes = "", multiAgentConfig = null, targetMode = "roblox", projectPath = "" } = opts;
     const terminalMode = targetMode === "terminal";
+    const godotMode = targetMode === "godot";
 
     const prompt = `CONTEXT: the user has installed a browser extension called XW Studio in their own browser. Here is how it works, so you can use it on their behalf:
 A browser extension (XW Studio) is running inside this page. It watches your replies. When it detects an XW Studio command in your text, it runs it against one or more connected MCP servers and sends the result back as the next message. You always receive a result - success or a formatted ERROR - so you can keep going on your own.
@@ -272,6 +273,10 @@ IMPORTANT: Your very first action is to write \`list_commands\` with no params (
 
 ━━━ TERMINAL MODE OVERRIDE ━━━
 The active XW Studio target is the user's local Terminal, not Roblox Studio. Ignore Roblox-specific startup and memory instructions above for this chat. Your first action is to write a fenced JSON command for terminal_list_dir with {"path":"."} and wait for its result. Then use only the exact terminal_* tools returned by XW Studio. Use terminal_read_file before editing an existing file, terminal_write_file for deliberate file changes, and terminal_exec for commands. Work one command at a time, never claim a command ran without its returned result, and do not use the AI site's own code interpreter or connectors. Treat shell commands as consequential: never run destructive commands, credential theft, persistence, or broad deletion; ask the user before a potentially destructive change.` : "";
+    const godotRules = godotMode ? `
+
+━━━ GODOT MODE OVERRIDE ━━━
+The active XW Studio target is a local Godot Engine project${projectPath ? ` at ${projectPath}` : ""}, not Roblox Studio. Ignore Roblox-specific startup and memory instructions above for this chat. Your first action is one fenced JSON command for godot_list_project with an empty params object, then wait for its result. Use only the exact godot_* tools returned by XW Studio. Always inspect project.godot and the relevant .gd/.tscn/.tres files before editing. Use project-relative paths (res:// when describing Godot resources), write only deliberate text changes with godot_write_file, and validate with godot_check_project after meaningful edits. Use godot_run_scene only for a bounded test with a short seconds value. Never tell the user to paste code manually when the selected project is available, never invent files or node paths, and never use the AI site's own code interpreter or connectors instead of XW Studio commands.` : "";
     const multiAgentRules = buildMultiAgentPrompt(multiAgentConfig);
 
     // Site-specific rules from the active provider, inserted ABOVE the user's
@@ -287,7 +292,7 @@ The active XW Studio target is the user's local Terminal, not Roblox Studio. Ign
       : "";
 
     // The marker leads the prompt; it tags the bootstrap turn for camouflage.
-    return `${SYS_MARKER}\n${prompt}${terminalRules}${siteRules}${multiAgentRules}${extra}`;
+    return `${SYS_MARKER}\n${prompt}${terminalRules}${siteRules}${multiAgentRules}${godotRules}${extra}`;
   }
 
   // ── Curated, TESTED usage notes per command ─────────────────────────────────
