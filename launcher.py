@@ -25,6 +25,9 @@ def _set_qt_plugin_path(QtCore):
         plugins = Path(QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.PluginsPath))
         platforms = plugins / "platforms"
         if platforms.is_dir():
+            # Environment variables can be ignored after QtCore is loaded;
+            # set the library path through Qt's own API as well.
+            QtCore.QCoreApplication.setLibraryPaths([str(plugins)])
             os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(platforms)
     except Exception:
         pass
@@ -409,6 +412,13 @@ def main():
         print(f"ERROR: bridge.py not found next to launcher.py: {BRIDGE}")
         return 1
     _configure_qt_plugins(QtCore)
+    plugins = Path(QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.PluginsPath))
+    qwindows = plugins / "platforms" / ("qwindows.dll" if os.name == "nt" else "libqxcb.so")
+    if os.name == "nt" and not qwindows.is_file():
+        print(f"ERROR: Qt Windows platform plugin is missing: {qwindows}")
+        print("Run: python -m pip uninstall -y PyQt5 PyQt5-Qt5 PyQt5-sip")
+        print("Then: python -m pip install --user --no-cache-dir PyQt5")
+        return 1
     app = QtWidgets.QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setStyle("Fusion")
