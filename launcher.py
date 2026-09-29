@@ -43,6 +43,24 @@ BRIDGE = ROOT / "bridge.py"
 DEFAULT_PORT = 17613
 
 
+def _configure_qt_plugins(QtCore):
+    """Make PyQt5 find its bundled Windows platform plugin.
+
+    A stale QT_PLUGIN_PATH inherited from another Qt application is a common
+    cause of the Windows "platform plugin could not be initialized" dialog,
+    especially when this file is opened with pythonw.exe.
+    """
+    os.environ.pop("QT_PLUGIN_PATH", None)
+    os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
+    try:
+        plugins = Path(QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.PluginsPath))
+        platforms = plugins / "platforms"
+        if platforms.is_dir():
+            os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(platforms)
+    except Exception:
+        pass
+
+
 class StreamSignals(QtCore.QObject):
     line = QtCore.pyqtSignal(str)
     finished = QtCore.pyqtSignal(int)
@@ -381,6 +399,7 @@ def main():
     if not BRIDGE.is_file():
         print(f"ERROR: bridge.py not found next to launcher.py: {BRIDGE}")
         return 1
+    _configure_qt_plugins(QtCore)
     app = QtWidgets.QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setStyle("Fusion")
