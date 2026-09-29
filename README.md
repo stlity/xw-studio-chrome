@@ -57,9 +57,9 @@ Open Studio and load a Place, then enable MCP (first time only):
 
 ### 3. Choose a target and run the Bridge
 
-On Windows, run `start.bat` and press **Y** for Roblox Studio, **G** for Godot Engine or **N** for Terminal. The choice is also available later in the extension popup.
+On Windows, run `launcher.py`. In the PyQt5 window choose **Roblox Studio**, **Godot Engine** or **Local Terminal**, then click **Start bridge**. The target can also be changed later in the extension popup.
 
-- **Windows:** double-click `start.bat` inside the extracted folder.
+- **Windows:** run `python launcher.py` inside the extracted folder. If `.py` files are associated with Python, double-clicking `launcher.py` works too. The launcher installs PyQt5 for the current user when needed.
 - **macOS:** double-click `MacOS_Start.command` inside the extracted folder. The first time, macOS will show a security warning ("could not verify... free of malware") - this is normal for any script downloaded outside the App Store, click **Done**, then go to **System Settings > Privacy & Security**, scroll to the bottom, and click **Open Anyway**. You only need to do this once.
 
 A small window opens, that means the Bridge is running.
@@ -112,7 +112,7 @@ See [CHANGELOG.md](CHANGELOG.md) for older releases.
 |-----|---------|
 | Green | Bridge + Studio ready (a place is open) |
 | Yellow | Bridge OK, but Studio isn't usable yet - open Roblox Studio, load a place, or enable its MCP server (hover the dot for the exact reason) |
-| Grey | Bridge offline - run start.bat (Windows) or MacOS_Start.command (macOS) |
+| Grey | Bridge offline - run launcher.py (Windows) or MacOS_Start.command (macOS) |
 
 ## Requirements
 

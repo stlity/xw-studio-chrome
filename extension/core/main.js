@@ -78,7 +78,7 @@
     }, EXPECT);
   }
 
-  // GitHub releases page - where users download the Bridge + start.bat.
+  // GitHub releases page - where users download the Bridge + launcher.py.
   const GITHUB_URL = "https://github.com/stlity/xw-studio-chrome";
   // Shown in the panel instead of a static "Free" label, so a user's screenshot
   // alone tells us which build they're on for debugging. Pulled from
@@ -768,7 +768,7 @@
   // "Extension context invalidated".
   //
   // This must be told apart from a real bridge outage. They are opposite
-  // problems with opposite fixes: a bridge outage is fixed by start.bat and
+  // problems with opposite fixes: a bridge outage is fixed by launcher.py and
   // resolves itself, while this one can ONLY be fixed by reloading the page and
   // never recovers on its own. Lumping them together (the old behaviour) told
   // the model "the local XW Studio bridge is unreachable", which sent the user
@@ -1850,7 +1850,7 @@
       if (!alive()) return;
       if (!A.toolList.length) {
         ui.banner("warn", "Bridge or target offline",
-          A.bridge.mode === "terminal" ? "Could not fetch terminal tools. Run start.bat and try again." : A.bridge.mode === "godot" ? "Could not fetch Godot tools. Select a folder containing project.godot, then try again." : "Could not fetch Roblox tools. Run start.bat and make sure Roblox Studio is open, then try again.");
+          A.bridge.mode === "terminal" ? "Could not fetch terminal tools. Run launcher.py and try again." : A.bridge.mode === "godot" ? "Could not fetch Godot tools. Select a folder containing project.godot, then try again." : "Could not fetch Roblox tools. Run launcher.py and make sure Roblox Studio is open, then try again.");
         return;
       }
       const modeState = await P.ensureComposerReady("startup");
@@ -2898,7 +2898,7 @@
         `<div id="zs-setup-sub">The <b>Bridge</b> is what connects this chat to Roblox Studio. Three steps and you're running.</div>` +
         `<ol id="zs-setup-steps">` +
           `<li>Download the Bridge from GitHub</li>` +
-          `<li>Run <code>start.bat</code></li>` +
+          `<li>Run <code>launcher.py</code></li>` +
           `<li>Back here, click <b>Start Roblox agent</b></li>` +
         `</ol>` +
         `<div class="zs-setup-copy-row">` +
@@ -3011,14 +3011,14 @@
           warn = !(A.bridge.connected && targetReady);
           msg = A.bridge.connected
             ? targetReady ? `<b>${modeLabel(A.bridge.mode)} agent active</b>${tools ? ` · ${tools} tools` : ""}` : `<b>Godot agent</b> · choose a project folder`
-            : `<b>${modeLabel(A.bridge.mode)} agent</b> · bridge offline, run start.bat`;
+            : `<b>${modeLabel(A.bridge.mode)} agent</b> · bridge offline, run launcher.py`;
         } else if (A.bridge && A.bridge.connected === false) {
           // placeDown/appDown/studioDown are all false in this case (they're
           // only computed when the bridge IS connected - see setStatus), so
           // without this check the bridge dropping fell through to the
           // stale "N tools" text below, reading as if nothing was wrong.
           toneClass = "warn"; warn = true;
-          msg = `<b>Agent active</b> · bridge offline, run start.bat`;
+          msg = `<b>Agent active</b> · bridge offline, run launcher.py`;
         } else if ((placeDown || appDown || studioDown) && addonOk) {
           // DEGRADED session by CHOICE: the user started the agent with Roblox
           // down but other MCP server(s) alive (the "Start agent (Roblox
@@ -3062,7 +3062,7 @@
           // unavailable until Studio is back. Button enabled, but visibly warned.
           toneClass = "warn"; warn = true;
           msg = !A.bridge.connected
-            ? `Run <b>start.bat</b> on your PC.`
+            ? `Run <b>launcher.py</b> on your PC.`
             : studioProcUp
               ? `<b>Studio open but not connected</b> - open <b>Assistant Settings &gt; MCP Servers</b> in Studio, or start without it.`
               : `<b>Roblox Studio offline</b> - start with your other MCP server(s).`;
@@ -3070,7 +3070,7 @@
         } else {
           toneClass = "warn"; warn = true;
           msg = !A.bridge.connected
-            ? `Run <b>start.bat</b> on your PC.`
+            ? `Run <b>launcher.py</b> on your PC.`
             : placeDown
               ? `Open a <b>place</b> in Roblox Studio.`
               : (appDown || studioDown) && studioProcUp
@@ -3152,7 +3152,7 @@
       if (isLocalMode(s.mode)) {
         const ready = !!s.connected && (s.mode !== "godot" || !!s.projectPath);
         dot.className = ready ? "on" : "off";
-        dot.title = ready ? `${modeLabel(s.mode)} bridge connected` : s.mode === "godot" && s.connected ? "Select a Godot project folder" : "Bridge offline, run start.bat";
+        dot.title = ready ? `${modeLabel(s.mode)} bridge connected` : s.mode === "godot" && s.connected ? "Select a Godot project folder" : "Bridge offline, run launcher.py";
         bridgeOk = ready;
         studioDown = false;
         placeDown = false;
@@ -3204,7 +3204,7 @@
       // Assistant Settings > MCP Servers inside the already-open Studio.
       const procUp = s.studioProc === true;
       let txt;
-      if (!s.connected) txt = "Bridge offline, run start.bat";
+      if (!s.connected) txt = "Bridge offline, run launcher.py";
       else if (!mcpOk) txt = "Bridge OK, open Roblox Studio";
       else if (noPlace) txt = "Roblox Studio is open but no place is loaded - open a place";
       else if (noApp) txt = procUp
@@ -3276,7 +3276,7 @@
         ? `<a class="zs-banner-video" href="${VIDEO_URL}" target="_blank" rel="noopener">▶︎ Watch setup tutorial</a>`
         : "";
       b.innerHTML = `<div class="zs-banner-t">⚠ Lost connection to XW Studio</div>
-        <div class="zs-banner-m">The XW Studio bridge stopped on your PC. Restart it (run start.bat and keep Roblox Studio open): the agent will reconnect automatically as soon as it is detected again.</div>
+        <div class="zs-banner-m">The XW Studio bridge stopped on your PC. Restart it (run launcher.py and keep Roblox Studio open): the agent will reconnect automatically as soon as it is detected again.</div>
         <div class="zs-banner-acts">${videoLink}<button class="zs-banner-x">Close</button></div>`;
       b.querySelector(".zs-banner-x").addEventListener("click", () => { b.remove(); if (bridgeBannerEl === b) bridgeBannerEl = null; });
       root.appendChild(b);
@@ -4072,7 +4072,7 @@
 
   // Status poll. An orphaned content script (see bg / isContextInvalidated) gets
   // a failure object back whose `connected` is undefined, which setStatus would
-  // read as "the bridge just dropped" and answer with the red "run start.bat"
+  // read as "the bridge just dropped" and answer with the red "run launcher.py"
   // banner - sending the user to fix a bridge that is perfectly healthy, with
   // the one thing that WOULD fix it (reload the page) never mentioned. Catch it
   // before setStatus, say the right thing, and stop polling: the context can

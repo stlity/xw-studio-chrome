@@ -7,7 +7,7 @@
 #  opens in an editor instead of running). It has NO dependency on start.py -
 #  it finds Python, ensures the one required library is installed, frees a
 #  previous bridge still holding the port, then runs bridge.py itself.
-#  The Windows equivalent is start.bat.
+#  The Windows equivalent is launcher.py.
 # ---------------------------------------------------------------------------
 set -u
 
