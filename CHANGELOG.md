@@ -1,6 +1,28 @@
 # Changelog
 
-All notable changes to XW Studio Free are documented here.
+All notable changes to XW Studio for Chrome are documented here.
+
+## [1.1] - 2026-09-29
+
+### Added
+- **PyQt5 desktop launcher for Windows.** `launcher.py` replaces the legacy batch launcher with a graphical control center containing Dashboard, Console and Settings tabs, target selection, Start/Stop controls, port configuration and a live console at the bottom of the window.
+- **Unified target selection.** Choose Roblox Studio, Godot Engine or Local Terminal before starting the bridge; the selected mode is passed to `bridge.py` through environment variables.
+- **Godot project picker.** The launcher validates that the selected folder contains `project.godot` and passes it safely to Godot mode.
+- **Launcher dependency manifest.** `requirements-launcher.txt` documents the PyQt5 dependency.
+
+### Fixed
+- **Windows Qt plugin discovery.** The launcher now locates PyQt5's bundled `qwindows.dll` through `PyQt5.__file__` and Qt library paths instead of relying on `QLibraryInfo` alone.
+- **Cyrillic Windows user paths.** Qt paths remain valid for Windows profiles whose names contain Cyrillic characters, such as `C:\\Users\\щд`.
+- **Corrupt PyQt5 installations.** A missing Qt DLL produces a clear repair instruction and an import failure triggers a no-cache PyQt5 reinstall attempt.
+- **Godot validation command.** Headless scene checks now run the selected scene directly with the dummy audio driver.
+- **Documentation drift.** README, extension instructions and user-facing offline messages now refer to `launcher.py`, not the removed batch launcher.
+
+### Changed
+- Extension and bridge version are now synchronized at `1.1`.
+- The extension manifest description covers Roblox Studio, Godot Engine and local Terminal.
+- The bridge startup client identifies itself as `xwstudio-bridge` version `1.1`.
+
+
 
 ## [1.5.5] - 2026-09-10
 
@@ -99,7 +121,7 @@ All notable changes to XW Studio Free are documented here.
 - **A clear message when XW Studio is updated while a tab is open.** Chrome
   updates extensions underneath open tabs, which leaves the page running a
   version that no longer exists. XW Studio reported this as "the bridge stopped
-  on your PC - run start.bat", sending you to fix something that was never
+  on your PC - run the Windows launcher", sending you to fix something that was never
   broken. It now says plainly that the page needs reloading, and offers a Reload
   button - your bridge and Studio are untouched.
 - **The AI no longer claims your bridge is offline without checking.** After one
@@ -219,7 +241,7 @@ All notable changes to XW Studio Free are documented here.
   as the in-page bar, without needing an already-started conversation. The
   footer text no longer singles out chat.deepseek.com - it now points to
   "a supported AI" since seven providers are supported.
-- **Bridge: auto-recovers its own port on relaunch.** Relaunching `start.bat`
+- **Bridge: auto-recovers its own port on relaunch.** Relaunching the legacy Windows launcher
   while a previous Bridge was still holding port 17613 (window closed with
   the X, a crash, a double launch) used to crash with a cryptic, sometimes
   localized `OSError [WinError 10048]`. The Bridge now detects and kills a
@@ -247,7 +269,7 @@ All notable changes to XW Studio Free are documented here.
   `MacOS_Start.command` launcher (double-click in Finder - no Terminal
   knowledge needed) finds Python 3.9+, installs `websockets` if missing,
   frees a previous Bridge still holding the port, and runs `bridge.py`,
-  mirroring what `start.bat` already does on Windows. `launch_studio_mcp.py`
+  mirroring what the legacy Windows launcher already does on Windows. `launch_studio_mcp.py`
   now also locates Roblox Studio's MCP binary inside the macOS app bundle
   (`RobloxStudio.app/Contents/MacOS/StudioMCP`), with a `ZS_STUDIO_MCP_PATH`
   override for non-standard installs.
@@ -448,7 +470,7 @@ third-party app silently hijacking Studio's MCP port.
   recovery: open Assistant Settings > MCP Servers so Studio re-registers. If
   the process tree can't be read, nothing is killed (a healthy connection is
   never put at risk).
-- The extension now tells non-technical users to "Run start.bat" instead of
+- The extension now tells non-technical users to "Run the Windows launcher" instead of
   "Run python bridge.py" / "Run the XW Studio bridge" in the offline panel,
   popup, and startup banner, matching the one-click launcher the README ships.
 
@@ -517,7 +539,7 @@ stale-pipe disconnects, MCP toggle turning off after a Studio update).
 - Terminal spinner during slow startup phases (server launch, Studio
   attach), so the console never looks frozen; only one spinner animates at a
   time.
-- start.bat hardening: refuses to run from an unextracted ZIP, handles
+- Legacy Windows launcher hardening: refuses to run from an unextracted ZIP, handles
   missing winget, rescans install folders after a winget install (PATH not
   refreshed), prints the Python version and the bridge's exit code on
   screen, and logs the Windows build - so a single screenshot of the
@@ -636,7 +658,7 @@ stale-pipe disconnects, MCP toggle turning off after a Studio update).
 - Bridge and installer logs moved to `logs/bridge_debug.log` and
   `logs/start.log`; the console now only shows what a user actually needs to
   read, full detail still lands in the log files.
-- `start.bat` now detects and explains a double launch instead of silently
+- `launcher.py` now detects and explains a double launch instead of silently
   replacing the previous instance, and warns clearly if port 17613 stays held
   after trying to free it.
 - Removed remaining em dashes from user-visible strings.
@@ -656,9 +678,9 @@ stale-pipe disconnects, MCP toggle turning off after a Studio update).
 ## [1.0.0] - 2026-06-09
 
 ### Added
-- Initial public release of XW Studio Free
+- Initial public release of XW Studio for Chrome
 - Browser extension for Chrome and Edge (DeepSeek chat integration)
-- Local Python bridge (`bridge.py` + `start.bat`) for Roblox Studio communication
+- Local Python bridge (`bridge.py` + the Windows launcher) for Roblox Studio communication
 - Built-in MCP server support (no plugin required - activate directly in Roblox Studio)
 - Read and edit Luau scripts directly from DeepSeek chat
 - Run Luau code in real time inside Roblox Studio

@@ -77,7 +77,7 @@ def _enable_ansi_colors():
 HOST = "127.0.0.1"
 # Keep in sync with extension/manifest.json "version" - printed at
 # startup so a user's terminal output alone tells us which build they're on.
-BRIDGE_VERSION = "1.0"
+BRIDGE_VERSION = "1.1"
 PORT = int(os.environ.get("ZS_BRIDGE_PORT", "17613"))
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
@@ -225,7 +225,7 @@ def _terminal_call(name, args, timeout):
         limit = max(1.0, min(float(args.get("timeout_ms", timeout * 1000)), 120000.0) / 1000.0)
         if sys.platform == "win32":
             # Explicitly use cmd.exe so Windows commands (dir, copy, set, &&)
-            # behave the same when Python is launched from start.bat or a GUI.
+            # behave the same when Python is launched from launcher.py or a GUI.
             shell_command = [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c", command]
         else:
             shell_command = ["/bin/sh", "-lc", command]
@@ -615,7 +615,7 @@ def _reclaim_bridge_port():
     """Free OUR OWN listen port (17613) from a leftover bridge before we bind.
 
     The common failure (reported live, WinError 10048 on bind): the user
-    relaunches start.bat while an earlier bridge.py is still running - window
+    relaunches launcher.py while an earlier bridge.py is still running - window
     closed with the X instead of Ctrl+C, a previous crash that left a detached
     python, or a double double-click. The old process still holds the port, so
     websockets.serve() dies on bind with a cryptic (localised) OSError and the
@@ -1029,7 +1029,7 @@ class MCPClient:
                 self._request("initialize", {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {},
-                    "clientInfo": {"name": "xwstudio-bridge", "version": "1.0"},
+                    "clientInfo": {"name": "xwstudio-bridge", "version": "1.1"},
                 }, timeout=30)
                 self._notify("notifications/initialized")
                 # Some MCP servers (notably Roblox's StudioMCP) advertise 0 tools at
@@ -2208,7 +2208,7 @@ async def main():
             await broadcast_status()
 
     # Free our own port from a leftover bridge (double-launch / X-closed window /
-    # prior crash) BEFORE binding, so relaunching start.bat "just works" instead
+    # prior crash) BEFORE binding, so relaunching launcher.py "just works" instead
     # of dying on WinError 10048. Only ever kills a proven bridge.py; anything
     # else falls through to the friendly bind-error below.
     if await asyncio.to_thread(_reclaim_bridge_port):
@@ -2229,7 +2229,7 @@ async def main():
                 f"the port. Close it, then relaunch. To find it:", "yl")
             log(f"      netstat -ano | findstr {PORT}", "yl")
             log(f"      taskkill /F /PID <the pid from the last column>", "yl")
-            log(f"    Or set a different port before start.bat:  set ZS_BRIDGE_PORT=17614", "yl")
+            log(f"    Or set a different port before launcher.py:  set ZS_BRIDGE_PORT=17614", "yl")
             return
         raise
 

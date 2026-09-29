@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "XW Studio for Chrome",
-  "version": "1.0",
-  "description": "XW Studio is a green Material 3 AI coding agent for Roblox Studio. Use free AI chats to plan, write and debug Luau through a local bridge.",
+  "version": "1.1",
+  "description": "XW Studio is a green Material 3 AI coding agent for Roblox Studio, Godot Engine and local Terminal. Use free AI chats to plan, write and debug projects through a local bridge.",
   "permissions": ["storage"],
   "options_page": "settings.html",
   "host_permissions": [

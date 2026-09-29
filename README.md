@@ -4,11 +4,13 @@
 **XW Studio** is a free browser extension that turns supported AI chats into a Roblox Studio, Godot Engine or local Terminal agent.
 Use the popup to switch between Roblox, Godot and Terminal modes. Godot mode can inspect a selected project, read and write GDScript/scenes/resources, validate the project headlessly and run bounded scene checks through the bridge. No API key is required.
 
-## XW Studio 1.0 — multi-agent settings
+## XW Studio 1.1 — multi-agent settings and desktop launcher
 
 Click **Settings** in the extension popup to open a dedicated tab. Enable the team, choose a workflow and safety mode, then assign any supported AI to six roles: **Designer, Builder, Debugger, Security reviewer, QA tester, and Producer / architect**. The profile is stored locally and added to the active chat's system prompt. Plan preview and automatic Output-driven debugging are opt-in controls in the same page.
 
 The current release provides role-aware orchestration instructions and safe planning in the active chat. It does not silently open or control several AI tabs at once; cross-tab execution remains a later stage so each external site keeps its own login and consent boundary.
+
+The Windows release now includes a PyQt5 desktop launcher with Dashboard, Console and Settings tabs. It lets you select Roblox Studio, Godot Engine or Local Terminal before starting the bridge. Qt plugin paths are resolved safely even when the Windows user profile contains Cyrillic characters.
 
 Supported AI providers include **DeepSeek** (recommended), **ChatGPT**, **Google Gemini**, **Kimi**, **GLM**, **Qwen**, **Arena**, **Meta AI**, **Microsoft Copilot**, **HuggingChat**, **Mistral**, **Claude**, **Grok**, **Perplexity** and **Duck.ai**. On ChatGPT, screenshots and image input are turned off on purpose: the free tier limits files and images on a separate quota from messages, so vision would only work part of the day. Gemini and Kimi can be unstable: Gemini tends to stop using the Roblox tools in long sessions, and Kimi sometimes uses its own native tools instead of the Roblox commands. On Arena, use **Direct** mode (XW Studio only supports Direct; it blocks Start in Battle / Side-by-Side / Agent modes). DeepSeek is the recommended provider.
 
@@ -87,17 +89,16 @@ Go to a supported site such as https://chat.deepseek.com (recommended), https://
 - Control play-testing
 - **Remember your project across sessions** persistent project memory saved inside your place
 
-## New in 1.5.5
+## Provider compatibility notes from previous releases
 
 - **DeepSeek: the agent starts again on the new unified model.** DeepSeek merged Instant, Expert and Vision into one model and removed the model picker, which left "Start Roblox agent" stuck on "DeepSeek mode not ready". XW Studio now recognises the new chat box, switches Search off and starts, with DeepThink left on.
 - **DeepSeek: screenshots work on every chat.** Images no longer need the Vision tab (it is gone) - the unified model sees your Studio captures, one at a time or several in a row.
 
-## New in 1.5.4
 
 - **ChatGPT: the XW Studio bar is back above the composer.** ChatGPT redesigned its input box and renamed the layout slot the bar sits in. XW Studio kept asking for the old name, so the browser dropped the bar into a stray strip at the bottom right of the composer and squeezed the text field to nothing. The bar now takes the right row again, and it reads the layout live instead of trusting a fixed name, so the next redesign should not knock it out.
 - **ChatGPT: long commands read cleanly on the new interface.** The same redesign replaced the code-block editor that used to hide line breaks and cut long lines off - the cause of the truncated commands fixed in 1.5.1. A 400-line block now reads back whole. If you are still on the old interface, the previous workaround is untouched.
 
-## New in 1.5.3
+### Kimi and DeepSeek compatibility notes
 
 - **Kimi moved to kimi.ai.** The old address, kimi.com, now asks for a Chinese phone number to sign in, which locked most people out. Open https://www.kimi.ai instead - the page is unchanged, the bar appears above the input box exactly as before. Reopen any Kimi tab you had on the old address.
 - **DeepSeek: the Instant model can now run the agent.** Picking Instant used to leave "Start Roblox agent" spinning forever with no explanation, because only Expert and Vision were accepted. Choose Instant before starting and the session runs on it - much faster than Expert, without the reasoning pass. Images stay off on Instant just like on Expert; the Vision tab remains the only one that can see screenshots.
