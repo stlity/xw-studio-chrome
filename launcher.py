@@ -17,12 +17,18 @@ from datetime import datetime
 from pathlib import Path
 
 
-def _set_qt_plugin_path(QtCore):
+def _set_qt_plugin_path(QtCore, plugins=None):
     """Point Qt at the PyQt5 plugins before QtWidgets is imported."""
     os.environ.pop("QT_PLUGIN_PATH", None)
     os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
     try:
-        plugins = Path(QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.PluginsPath))
+        if plugins is None:
+            import PyQt5  # type: ignore
+            # QLibraryInfo can replace Cyrillic profile characters with '?'
+            # on Windows; PyQt5.__file__ keeps the real Unicode path.
+            plugins = Path(PyQt5.__file__).resolve().parent / "Qt5" / "plugins"
+        else:
+            plugins = Path(plugins)
         platforms = plugins / "platforms"
         if platforms.is_dir():
             # Environment variables can be ignored after QtCore is loaded;
@@ -35,8 +41,9 @@ def _set_qt_plugin_path(QtCore):
 
 def _ensure_pyqt5():
     try:
+        import PyQt5  # type: ignore
         from PyQt5 import QtCore  # type: ignore
-        _set_qt_plugin_path(QtCore)
+        _set_qt_plugin_path(QtCore, Path(PyQt5.__file__).resolve().parent / "Qt5" / "plugins")
         from PyQt5 import QtGui, QtWidgets  # type: ignore
         return QtCore, QtGui, QtWidgets
     except ImportError as first_error:
@@ -52,10 +59,11 @@ def _ensure_pyqt5():
             raise SystemExit(
                 "Could not repair PyQt5. Run: python -m pip install --user "
                 "--force-reinstall --no-cache-dir PyQt5"
-            )
+        )
         try:
+            import PyQt5  # type: ignore
             from PyQt5 import QtCore  # type: ignore
-            _set_qt_plugin_path(QtCore)
+            _set_qt_plugin_path(QtCore, Path(PyQt5.__file__).resolve().parent / "Qt5" / "plugins")
             from PyQt5 import QtGui, QtWidgets  # type: ignore
             return QtCore, QtGui, QtWidgets
         except ImportError as repaired_error:
@@ -421,7 +429,8 @@ def main():
         print(f"ERROR: bridge.py not found next to launcher.py: {BRIDGE}")
         return 1
     _configure_qt_plugins(QtCore)
-    plugins = Path(QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.PluginsPath))
+    import PyQt5  # type: ignore
+    plugins = Path(PyQt5.__file__).resolve().parent / "Qt5" / "plugins"
     qwindows = plugins / "platforms" / ("qwindows.dll" if os.name == "nt" else "libqxcb.so")
     if os.name == "nt" and not qwindows.is_file():
         print(f"ERROR: Qt Windows platform plugin is missing: {qwindows}")
