@@ -17,9 +17,24 @@ from datetime import datetime
 from pathlib import Path
 
 
+def _set_qt_plugin_path(QtCore):
+    """Point Qt at the PyQt5 plugins before QtWidgets is imported."""
+    os.environ.pop("QT_PLUGIN_PATH", None)
+    os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
+    try:
+        plugins = Path(QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.PluginsPath))
+        platforms = plugins / "platforms"
+        if platforms.is_dir():
+            os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(platforms)
+    except Exception:
+        pass
+
+
 def _ensure_pyqt5():
     try:
-        from PyQt5 import QtCore, QtGui, QtWidgets  # type: ignore
+        from PyQt5 import QtCore  # type: ignore
+        _set_qt_plugin_path(QtCore)
+        from PyQt5 import QtGui, QtWidgets  # type: ignore
         return QtCore, QtGui, QtWidgets
     except ImportError:
         print("PyQt5 is not installed. Installing it for the current user...", flush=True)
@@ -31,7 +46,9 @@ def _ensure_pyqt5():
             raise SystemExit(
                 "Could not install PyQt5. Run: python -m pip install --user PyQt5"
             )
-        from PyQt5 import QtCore, QtGui, QtWidgets  # type: ignore
+        from PyQt5 import QtCore  # type: ignore
+        _set_qt_plugin_path(QtCore)
+        from PyQt5 import QtGui, QtWidgets  # type: ignore
         return QtCore, QtGui, QtWidgets
 
 
@@ -50,15 +67,7 @@ def _configure_qt_plugins(QtCore):
     cause of the Windows "platform plugin could not be initialized" dialog,
     especially when this file is opened with pythonw.exe.
     """
-    os.environ.pop("QT_PLUGIN_PATH", None)
-    os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
-    try:
-        plugins = Path(QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.PluginsPath))
-        platforms = plugins / "platforms"
-        if platforms.is_dir():
-            os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(platforms)
-    except Exception:
-        pass
+    _set_qt_plugin_path(QtCore)
 
 
 class StreamSignals(QtCore.QObject):
