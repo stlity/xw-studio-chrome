@@ -39,20 +39,29 @@ def _ensure_pyqt5():
         _set_qt_plugin_path(QtCore)
         from PyQt5 import QtGui, QtWidgets  # type: ignore
         return QtCore, QtGui, QtWidgets
-    except ImportError:
-        print("PyQt5 is not installed. Installing it for the current user...", flush=True)
+    except ImportError as first_error:
+        print(f"PyQt5 could not load ({first_error}). Repairing the installation...", flush=True)
         result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--user", "PyQt5"],
+            [
+                sys.executable, "-m", "pip", "install", "--user",
+                "--force-reinstall", "--no-cache-dir", "PyQt5",
+            ],
             check=False,
         )
         if result.returncode:
             raise SystemExit(
-                "Could not install PyQt5. Run: python -m pip install --user PyQt5"
+                "Could not repair PyQt5. Run: python -m pip install --user "
+                "--force-reinstall --no-cache-dir PyQt5"
             )
-        from PyQt5 import QtCore  # type: ignore
-        _set_qt_plugin_path(QtCore)
-        from PyQt5 import QtGui, QtWidgets  # type: ignore
-        return QtCore, QtGui, QtWidgets
+        try:
+            from PyQt5 import QtCore  # type: ignore
+            _set_qt_plugin_path(QtCore)
+            from PyQt5 import QtGui, QtWidgets  # type: ignore
+            return QtCore, QtGui, QtWidgets
+        except ImportError as repaired_error:
+            raise SystemExit(
+                "PyQt5 is still broken after repair: " + str(repaired_error)
+            )
 
 
 QtCore, QtGui, QtWidgets = _ensure_pyqt5()
