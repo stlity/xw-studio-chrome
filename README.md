@@ -4,11 +4,11 @@
 **XW Studio** is a free browser extension that turns supported AI chats into a Roblox Studio, Godot Engine or local Terminal agent.
 Use the popup to switch between Roblox, Godot and Terminal modes. Godot mode can inspect a selected project, read and write GDScript/scenes/resources, validate the project headlessly and run bounded scene checks through the bridge. No API key is required.
 
-## XW Studio 1.2 — multi-agent settings and text launcher
+## XW Studio 1.3 — roles, session transfer and provider fixes
 
 Click **Settings** in the extension popup to open a dedicated tab. Enable the team, choose a workflow and safety mode, then assign any supported AI to six roles: **Designer, Builder, Debugger, Security reviewer, QA tester, and Producer / architect**. The profile is stored locally and added to the active chat's system prompt. Plan preview and automatic Output-driven debugging are opt-in controls in the same page.
 
-The current release provides role-aware orchestration instructions and safe planning in the active chat. It does not silently open or control several AI tabs at once; cross-tab execution remains a later stage so each external site keeps its own login and consent boundary.
+The current release provides role-aware orchestration instructions and safe planning in the active chat. Choose **По умолчанию** for the normal prompt, or select a role directly in the XW Studio bar before starting. Use **Save session** in the in-page menu to carry the visible conversation to another supported AI, then import it in a new chat. It does not silently open or control several AI tabs at once; each external site keeps its own login and consent boundary.
 
 The Windows release includes a text-based Python launcher. It lets you select Roblox Studio, Godot Engine or Local Terminal, shows bridge output in the same console, and provides status, log, restart and mode commands. It requires no PyQt5 and hides the separate StudioMCP console window.
 
@@ -74,7 +74,7 @@ Go to a supported site such as https://chat.deepseek.com (recommended), https://
 
 > It works only on the supported AI sites listed above; it will not inject into arbitrary websites.
 > On Arena, keep the mode dropdown on **Direct** - XW Studio blocks Start in Battle / Side-by-Side / Agent modes (it only drives a single Direct reply).
-> Gemini and Kimi can be unstable (model behavior, not the extension): Gemini may stop using the Roblox tools after a while, and Kimi may use its own native tools instead. If the AI starts answering in plain text instead of acting, remind it to use the commands or start a new session.
+> Gemini and Kimi can be unstable (model behavior, not the extension): Gemini may stop using the Roblox tools after a while, and Kimi may use its own native tools instead. Grok and Perplexity use the hardened generic adapter with broader composer/send selectors. If an AI starts answering in plain text instead of acting, remind it to use the commands or start a new session.
 ### 5. Watch the setup tutorial
 
 [Watch the setup tutorial on YouTube](https://youtu.be/kPKiZLZ9_Ps)

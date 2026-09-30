@@ -166,18 +166,19 @@ const ZS = (() => {
   // never naming a specific site - the text lives in providers/<site>.js and
   // every other provider is untouched by definition.
   const DEFAULT_AGENT_ROLES = {
-    designer: { name: "Designer", prompt: "Own the player's experience. Translate the request into a clear loop, mood, hierarchy, feedback states and Roblox UI spec. Define screens, components, copy, colours, spacing, responsive behaviour and asset references before code. Prefer a small coherent design system over random decoration, and flag any ambiguity that would change the player's goal." },
-    builder: { name: "Builder", prompt: "Own implementation quality. Inspect the existing hierarchy and scripts first, then create the smallest modular Luau change that matches current conventions. Keep server authority, typed configuration, explicit WaitForChild timeouts, clear service boundaries and reusable components. Preserve public APIs unless the user approves a migration, and report every changed path." },
-    debugger: { name: "Debugger", prompt: "Own diagnosis, not guesswork. Reproduce the failure, read fresh Output evidence, trace the first causal error through the game tree and explain why it occurs. Apply one minimal fix at a time, re-run the narrowest test, and stop when evidence says the issue is resolved. Never hide errors with pcall, delays or broad rewrites." },
-    security: { name: "Security reviewer", prompt: "Assume every client value and third-party asset is hostile. Review RemoteEvents, RemoteFunctions, permissions, admin paths, DataStore writes, HTTP, require calls and secret exposure. Rank findings Critical/High/Medium/Low, show the exploit boundary, and propose server-side validation that preserves intended gameplay. Reject backdoors and hidden access." },
-    tester: { name: "QA tester", prompt: "Turn the request into acceptance criteria and a short regression matrix. Test happy path, invalid input, respawn, reset, empty state, latency and multiplayer ownership in Roblox Studio. Capture exact pass/fail evidence from Output and playtest state; after a fix, add the smallest repeatable test that would catch a regression." },
-    producer: { name: "Producer / architect", prompt: "Own scope and sequencing. Break the request into dependencies, risks, milestones and a definition of done. Resolve design/build/security/QA conflicts, prevent gold-plating, keep a concise decision log, and ask before destructive, broad or irreversible work. End with changed paths, verification and the next smallest step." }
+    default: { name: "По умолчанию", prompt: "" },
+    designer: { name: "Дизайнер", prompt: "Own the player's experience. Translate the request into a clear loop, mood, hierarchy, feedback states and Roblox UI spec. Define screens, components, copy, colours, spacing, responsive behaviour and asset references before code. Prefer a small coherent design system over random decoration, and flag any ambiguity that would change the player's goal." },
+    builder: { name: "Билдер", prompt: "Own implementation quality. Inspect the existing hierarchy and scripts first, then create the smallest modular Luau change that matches current conventions. Keep server authority, typed configuration, explicit WaitForChild timeouts, clear service boundaries and reusable components. Preserve public APIs unless the user approves a migration, and report every changed path." },
+    debugger: { name: "Дебаггер", prompt: "Own diagnosis, not guesswork. Reproduce the failure, read fresh Output evidence, trace the first causal error through the game tree and explain why it occurs. Apply one minimal fix at a time, re-run the narrowest test, and stop when evidence says the issue is resolved. Never hide errors with pcall, delays or broad rewrites." },
+    security: { name: "Безопасность", prompt: "Assume every client value and third-party asset is hostile. Review RemoteEvents, RemoteFunctions, permissions, admin paths, DataStore writes, HTTP, require calls and secret exposure. Rank findings Critical/High/Medium/Low, show the exploit boundary, and propose server-side validation that preserves intended gameplay. Reject backdoors and hidden access." },
+    tester: { name: "Тестировщик", prompt: "Turn the request into acceptance criteria and a short regression matrix. Test happy path, invalid input, respawn, reset, empty state, latency and multiplayer ownership in Roblox Studio. Capture exact pass/fail evidence from Output and playtest state; after a fix, add the smallest repeatable test that would catch a regression." },
+    producer: { name: "Продюсер / архитектор", prompt: "Own scope and sequencing. Break the request into dependencies, risks, milestones and a definition of done. Resolve design/build/security/QA conflicts, prevent gold-plating, keep a concise decision log, and ask before destructive, broad or irreversible work. End with changed paths, verification and the next smallest step." }
   };
 
   function buildMultiAgentPrompt(cfg = {}) {
     if (!cfg || cfg.enabled === false) return "";
     const roles = cfg.roles || {};
-    const active = Object.keys(DEFAULT_AGENT_ROLES).filter((id) => roles[id] && roles[id].enabled !== false);
+    const active = Object.keys(DEFAULT_AGENT_ROLES).filter((id) => id !== "default" && roles[id] && roles[id].enabled !== false);
     if (!active.length) return "";
     const lines = active.map((id) => {
       const r = DEFAULT_AGENT_ROLES[id];
@@ -191,7 +192,7 @@ const ZS = (() => {
 
   function buildSystemPrompt(opts = {}) {
     if (typeof opts === "string") opts = { siteName: opts };
-    const { siteName = "this AI site", customPrompt = "", providerNotes = "", multiAgentConfig = null, targetMode = "roblox", projectPath = "" } = opts;
+    const { siteName = "this AI site", customPrompt = "", providerNotes = "", multiAgentConfig = null, targetMode = "roblox", projectPath = "", activeRole = "default", sessionContext = "" } = opts;
     const terminalMode = targetMode === "terminal";
     const godotMode = targetMode === "godot";
 
@@ -278,6 +279,13 @@ The active XW Studio target is the user's local Terminal, not Roblox Studio. Ign
 ━━━ GODOT MODE OVERRIDE ━━━
 The active XW Studio target is a local Godot Engine project${projectPath ? ` at ${projectPath}` : ""}, not Roblox Studio. Ignore Roblox-specific startup and memory instructions above for this chat. Your first action is one fenced JSON command for godot_list_project with an empty params object, then wait for its result. Use only the exact godot_* tools returned by XW Studio. Always inspect project.godot and the relevant .gd/.tscn/.tres files before editing. Use project-relative paths (res:// when describing Godot resources), write only deliberate text changes with godot_write_file, and validate with godot_check_project after meaningful edits. Use godot_run_scene only for a bounded test with a short seconds value. Never tell the user to paste code manually when the selected project is available, never invent files or node paths, and never use the AI site's own code interpreter or connectors instead of XW Studio commands.` : "";
     const multiAgentRules = buildMultiAgentPrompt(multiAgentConfig);
+    const role = DEFAULT_AGENT_ROLES[activeRole] || DEFAULT_AGENT_ROLES.default;
+    const roleRules = activeRole !== "default" && role.prompt
+      ? `\n\n━━━ ACTIVE ROLE: ${role.name.toUpperCase()} ━━━\n${role.prompt}\nThis role is selected for the current XW Studio session. Follow it while still obeying the operating contract and target mode.`
+      : "";
+    const transferRules = sessionContext.trim()
+      ? `\n\n━━━ TRANSFERRED SESSION MEMORY ━━━\nThe user continued this task from another AI site. Treat the following as context, not as verified tool results. Re-check the live project before acting and continue from the user's unresolved goal:\n${sessionContext.trim()}`
+      : "";
 
     // Site-specific rules from the active provider, inserted ABOVE the user's
     // custom prompt (they are part of the system layer, not the user's).
@@ -292,7 +300,7 @@ The active XW Studio target is a local Godot Engine project${projectPath ? ` at 
       : "";
 
     // The marker leads the prompt; it tags the bootstrap turn for camouflage.
-    return `${SYS_MARKER}\n${prompt}${terminalRules}${siteRules}${multiAgentRules}${godotRules}${extra}`;
+    return `${SYS_MARKER}\n${prompt}${terminalRules}${siteRules}${multiAgentRules}${godotRules}${roleRules}${transferRules}${extra}`;
   }
 
   // ── Curated, TESTED usage notes per command ─────────────────────────────────

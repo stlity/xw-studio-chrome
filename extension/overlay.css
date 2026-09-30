@@ -192,6 +192,13 @@ html.zs-light #zs-unstable {
 #zs-state.zs-state-warn b { color: #fecaca; }
 #zs-bar.tone-active #zs-state b { color: #6ee7b7; }
 
+/* Select the active role directly on the page before starting the agent. */
+.zs-role-wrap { display: inline-flex; align-items: center; gap: 4px; flex: none; color: rgba(255,255,255,.62); font-size: 10px; }
+.zs-role-wrap select { max-width: 118px; height: 28px; padding: 0 7px; color: #e8e8ec; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; font: inherit; font-size: 11px; }
+.zs-role-wrap select:disabled { opacity: .58; cursor: not-allowed; }
+html.zs-light .zs-role-wrap { color: rgba(0,0,0,.62); }
+html.zs-light .zs-role-wrap select { color: #222; background: rgba(0,0,0,.05); border-color: rgba(0,0,0,.14); }
+
 /* live + idle dots inside the state line */
 .zs-live-dot {
   width: 8px; height: 8px; border-radius: 50%; background: #34d399; flex: none;
@@ -310,6 +317,8 @@ html.zs-light #zs-menu::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); b
   font-size: 10.5px; font-weight: 600; letter-spacing: 0.2px; color: #82828b;
 }
 .zs-menu-note { font-size: 10.5px; color: #6b6b73; line-height: 1.45; margin: 0 0 9px; }
+.zs-transfer-ready { color: #86efac; }
+.zs-link-btn { padding: 0; border: 0; background: none; color: #93c5fd; text-decoration: underline; cursor: pointer; font: inherit; }
 
 /* AI site rows: plain list, subtle surface on hover */
 .zs-site-opt {

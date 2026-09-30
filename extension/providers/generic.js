@@ -11,20 +11,26 @@ const ZSProvider = (() => {
   const siteId = host.includes("copilot") ? "copilot" : host.includes("mistral") ? "mistral" : host.includes("claude") ? "claude" : host.includes("grok") ? "grok" : host.includes("perplexity") ? "perplexity" : host.includes("duck") ? "duck" : "huggingchat";
   const displayName = { copilot: "Microsoft Copilot", mistral: "Mistral Vibe", claude: "Claude", grok: "Grok", perplexity: "Perplexity", duck: "Duck.ai", huggingchat: "HuggingChat" }[siteId];
   const timings = { GEN_IDLE_MS: 1400, REASON_IDLE_MS: 8000, WARMUP_MS: 30000, REASON_NOREPLY_MS: 60000, STABLE_MS: 7000, RESPONSE_TIMEOUT_MS: 240000 };
-  const TEXT = "textarea:not(#zs-set-text), [contenteditable=\"true\"]:not(#zs-set-text)";
-  const SEND = "button[type=submit], button[aria-label*='Send' i], button[aria-label*='send' i], button[data-testid*='send' i], button[class*='send' i]";
-  const STOP = "button[aria-label*='Stop' i], button[aria-label*='stop' i], button[data-testid*='stop' i]";
+  const TEXT = "textarea:not(#zs-set-text), [contenteditable=\"true\"]:not(#zs-set-text), [role=\"textbox\"]:not(#zs-set-text)";
+  const SEND = "button[type=submit], button[aria-label*='Send' i], button[aria-label*='Submit' i], button[aria-label*='send' i], button[data-testid*='send' i], button[data-testid*='submit' i], button[class*='send' i]";
+  const STOP = "button[aria-label*='Stop' i], button[aria-label*='stop' i], button[data-testid*='stop' i], button[data-testid*='cancel' i]";
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const visible = (e) => e && !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length);
   const text = (e) => (e && (e.innerText || e.textContent || "")).trim();
   const editor = () => [...document.querySelectorAll(TEXT)].filter((e) => !e.closest("#zs-root") && visible(e)).pop() || null;
   const sendButton = () => [...document.querySelectorAll(SEND)].filter((e) => !e.closest("#zs-root") && visible(e)).pop() || null;
+  const roleText = (e) => ["data-message-author-role", "data-author", "data-role", "aria-label", "data-testid", "class"]
+    .map((k) => e.getAttribute(k) || "").join(" ").toLowerCase();
   const assistant = (e) => {
-    const role = (e.getAttribute("data-message-author-role") || e.getAttribute("data-author") || e.getAttribute("aria-label") || "").toLowerCase();
-    return /assistant|bot|copilot|ai|model|hugging/.test(role);
+    const role = roleText(e);
+    if (/user|human|question|prompt/.test(role)) return false;
+    if (/assistant|bot|copilot|ai|model|hugging|answer|response|completion/.test(role)) return true;
+    // Some current Grok/Perplexity turns expose no author attribute. allItems()
+    // assigns a conservative alternating fallback for those wrappers.
+    return e.__xwGenericRole === "assistant";
   };
   function allItems() {
-    const sels = ["[data-message-author-role]", "[data-testid*='message' i]", "article", "[role='article']"];
+    const sels = ["[data-message-author-role]", "[data-testid*='message' i]", "[data-testid*='conversation-turn' i]", "[data-testid*='response' i]", "article[data-testid]", "[role='article'][data-testid]"];
     const out = [], seen = new Set();
     for (const e of document.querySelectorAll(sels.join(","))) {
       if (!visible(e) || e.closest("#zs-root") || !text(e) || seen.has(e)) continue;
@@ -32,6 +38,12 @@ const ZSProvider = (() => {
       if ([...e.children].some((c) => c.matches && sels.some((s) => { try { return c.matches(s); } catch { return false; } }))) continue;
       seen.add(e); out.push(e);
     }
+    out.forEach((e, i) => {
+      const role = roleText(e);
+      if (!/user|human|question|prompt|assistant|bot|copilot|ai|model|hugging|answer|response|completion/.test(role)) {
+        e.__xwGenericRole = i % 2 ? "assistant" : "user";
+      }
+    });
     return out;
   }
   const isAssistantItem = (e) => assistant(e);
@@ -59,7 +71,18 @@ const ZSProvider = (() => {
     }
   };
   const clickSend = () => { const b = sendButton(); if (b) { b.click(); return true; } return false; };
-  async function typeAndSend(value) { const e = editor(); if (!e) throw new Error("composer not found"); setEditor(e, value); await sleep(120); if (!clickSend()) e.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true })); }
+  async function typeAndSend(value) {
+    const e = editor(); if (!e) throw new Error("composer not found");
+    setEditor(e, value); await sleep(180);
+    for (let i = 0; i < 8; i++) {
+      const b = sendButton();
+      if (b && !b.disabled) { b.click(); return; }
+      await sleep(120);
+    }
+    e.focus();
+    e.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+    e.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+  }
   function setInputLock(on) { locked = !!on; const e = editor(); if (!e) return; if (on) { e.dataset.xwPlaceholder = e.getAttribute("placeholder") || ""; e.setAttribute("readonly", ""); e.setAttribute("placeholder", "XW Studio is working…"); } else { e.removeAttribute("readonly"); if (e.dataset.xwPlaceholder != null) e.setAttribute("placeholder", e.dataset.xwPlaceholder); } }
   const isGenerating = () => !!document.querySelector(STOP);
   const isBusyNow = isGenerating;
@@ -69,7 +92,9 @@ const ZSProvider = (() => {
   const streamLen = (e) => itemText(e).length;
   const readAssistant = () => { const item = lastAssistant(); return item ? { present: true, reply: itemText(item), thinking: "", item } : { present: false, reply: "", thinking: "", item: null }; };
   const itemKey = (e) => e ? (e.getAttribute("data-message-id") || e.getAttribute("data-testid") || null) : null;
-  const conversationKey = () => location.href;
+  // Query strings and hash fragments change while Grok/Perplexity update model
+  // state. They are not new conversations and used to abort bootstrap mid-send.
+  const conversationKey = () => `${location.origin}${location.pathname}`;
   const chatIsEmpty = () => allItems().length === 0;
   const isFreshChat = () => chatIsEmpty() && !!editor();
   let cachedEditor = null;

@@ -2,6 +2,19 @@
 
 All notable changes to XW Studio for Chrome are documented here.
 
+## [1.3] - 2026-09-30
+
+### Added
+- **In-page role selector.** Choose `По умолчанию` for the ordinary prompt or select Designer, Builder, Debugger, Security, Tester or Producer before starting a session.
+- **Cross-site session transfer.** Save the visible transcript from one supported AI and import it into a new chat on another site as clearly-labelled, unverified context.
+
+### Fixed
+- **Grok and Perplexity sending.** Broadened composer, submit/stop and message selectors, added submit retries, and made conversation keys stable when query/hash state changes.
+- **Generic message detection.** Sites that do not expose author attributes now use a conservative alternating user/assistant fallback, avoiding a permanently stuck Starting state.
+
+### Changed
+- Extension, bridge and launcher versions are synchronized at `1.3`.
+
 ## [1.2] - 2026-09-30
 
 ### Added

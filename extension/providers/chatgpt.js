@@ -70,10 +70,10 @@ const ZSProvider = (() => {
     editor: "#prompt-textarea",
     // The ONE submit control; its data-testid says whether it is currently a
     // send or a stop button (see isStopBtn). Id first - it survives testid churn.
-    submitBtn: "#composer-submit-button, button[data-testid='send-button'], button[data-testid='stop-button']",
+    submitBtn: "#composer-submit-button, button[data-testid='send-button'], button[data-testid='stop-button'], button[type='submit'], button[aria-label*='send' i], button[aria-label*='отправ' i], button[aria-label*='stop' i], button[aria-label*='interromp' i], button[aria-label*='останов' i]",
     // Kept for installSendHooks, which needs to recognise a click on the native
     // stop control wherever it lives.
-    stopBtn: "button[data-testid='stop-button']",
+    stopBtn: "button[data-testid='stop-button'], button[aria-label*='stop' i], button[aria-label*='interromp' i], button[aria-label*='останов' i]",
     codeWrap: "pre",
     // composer frame: the <form> that wraps the ProseMirror editor.
     errorSurfaces: '[role="alert"],[data-testid*="error"],[class*="error-message"]',
@@ -343,10 +343,13 @@ const ZSProvider = (() => {
   // sendButton() cheerfully returns the stop square and every guarded click is
   // refused. That is exactly what stranded a tool result in the composer and
   // raised "ChatGPT did not accept the injected message after 4 attempts".
-  const isStopBtn = (b) => !!b && b.getAttribute("data-testid") === "stop-button";
+  const isStopBtn = (b) => {
+    if (!b) return false;
+    const label = `${b.getAttribute("data-testid") || ""} ${b.getAttribute("aria-label") || ""}`.toLowerCase();
+    return b.getAttribute("data-testid") === "stop-button" || /stop|interromp|останов/.test(label);
+  };
   const submitButton = () => {
-    const b = document.querySelector(S.submitBtn);
-    return b && b.offsetParent !== null ? b : null;
+    return [...document.querySelectorAll(S.submitBtn)].find((b) => b.offsetParent !== null && !b.closest("#zs-root")) || null;
   };
   const sendButton = () => {
     const b = submitButton();

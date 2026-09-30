@@ -1635,9 +1635,16 @@
   // Multi-agent profile is configured in the extension settings tab and cached
   // here so the bootstrap prompt remains synchronous and deterministic.
   let multiAgentConfig = { enabled: false };
+  let activeRole = "default";
+  let sessionTransfer = "";
   try {
     chrome.storage.local.get("xwMultiAgentConfig", (r) => {
       if (r && r.xwMultiAgentConfig) multiAgentConfig = r.xwMultiAgentConfig;
+    });
+    chrome.storage.local.get(["xwActiveRole", "xwSessionTransfer"], (r) => {
+      if (r && ZS.DEFAULT_AGENT_ROLES[r.xwActiveRole]) activeRole = r.xwActiveRole;
+      if (r && typeof r.xwSessionTransfer === "string") sessionTransfer = r.xwSessionTransfer.slice(0, 50000);
+      try { ui.setStarting(); } catch {}
     });
   } catch {}
 
@@ -1650,6 +1657,8 @@
       customPrompt: ui.getCustomPrompt(),
       providerNotes: P.promptExtra || "",
       multiAgentConfig,
+      activeRole,
+      sessionContext: sessionTransfer,
       targetMode: A.bridge.mode || "roblox",
       projectPath: A.bridge.projectPath || "",
     });
@@ -1921,6 +1930,10 @@
       }
       A.started = true;
       rememberSession(P.conversationKey()); // survives virtualization AND reloads
+      if (sessionTransfer) {
+        sessionTransfer = "";
+        try { chrome.storage.local.remove("xwSessionTransfer"); } catch {}
+      }
       ui.setStarted(true);
       ui.toast(`Agent ready. Ask ${P.displayName} to work in ${modeLabel(A.bridge.mode)}.`);
     } catch (e) {
@@ -2554,7 +2567,7 @@
   //  UI  (control panel, onboarding, stop button, banners, toast, input cover)
   // ════════════════════════════════════════════════════════════════════════
   const ui = (() => {
-    let root, bar, dot, brandEl, stateEl, actionBtn, stopBtn, switchBtn, menuEl, unstableEl;
+    let root, bar, dot, brandEl, stateEl, actionBtn, stopBtn, switchBtn, roleSelect, menuEl, unstableEl;
     let cover, coverRaf, barRaf, barLastFrame = 0;
     let openMenuFn = null; // set by build(); lets the popup force the panel open via runtime message
     let bridgeOk = false, studioDown = false, placeDown = false, appDown = false, addonOk = false, studioProcUp = false;
@@ -2573,6 +2586,7 @@
           <span id="zs-dot" class="off" title=""></span>
           <span id="zs-brand">XW Studio <span class="zs-free">v${EXT_VERSION}</span></span>
           <span id="zs-state"></span>
+          <label class="zs-role-wrap" title="Роль агента"><span>Роль</span><select id="zs-role"></select></label>
           <button id="zs-action"></button>
           <button id="zs-stop" hidden>■ Stop</button>
           <button id="zs-switch" aria-label="Switch AI and options" title="Switch AI and options"><span id="zs-switch-name"></span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -2588,6 +2602,17 @@
       actionBtn = root.querySelector("#zs-action");
       stopBtn = root.querySelector("#zs-stop");
       switchBtn = root.querySelector("#zs-switch");
+      roleSelect = root.querySelector("#zs-role");
+      if (roleSelect) {
+        roleSelect.innerHTML = Object.entries(ZS.DEFAULT_AGENT_ROLES)
+          .map(([id, role]) => `<option value="${id}">${role.name}</option>`).join("");
+        roleSelect.value = ZS.DEFAULT_AGENT_ROLES[activeRole] ? activeRole : "default";
+        roleSelect.addEventListener("change", () => {
+          activeRole = roleSelect.value;
+          try { chrome.storage.local.set({ xwActiveRole: activeRole }); } catch {}
+          renderBar();
+        });
+      }
       const swName = root.querySelector("#zs-switch-name");
       if (swName) swName.textContent = P.displayName || P.id;
       menuEl = root.querySelector("#zs-menu");
@@ -2670,6 +2695,42 @@
     function syncMenuPrompt() {
       const ta = root && root.querySelector("#zs-set-text");
       if (ta && document.activeElement !== ta) ta.value = customPrompt;
+    }
+
+    // Cross-site session handoff. The source page saves the visible transcript
+    // locally; a new target page can import it before starting XW Studio. This
+    // deliberately stores text only - never cookies, credentials or page HTML.
+    function exportSessionTransfer() {
+      const rows = [];
+      for (const item of (P.allItems ? P.allItems() : [])) {
+        const value = (P.classifyText ? P.classifyText(item, ".zs-chip") : P.itemText(item) || "").trim();
+        if (!value) continue;
+        rows.push(`${P.isUserItem && P.isUserItem(item) ? "USER" : "ASSISTANT"}:\n${value}`);
+      }
+      const transcript = rows.join("\n\n").slice(-50000);
+      if (!transcript) { toast("В этом чате пока нечего переносить."); return; }
+      const payload = `[Source: ${P.displayName || P.id}; exported ${new Date().toLocaleString()}]\n${transcript}`;
+      sessionTransfer = payload;
+      try { chrome.storage.local.set({ xwSessionTransfer: payload }); } catch {}
+      toast("Память сессии сохранена. Открой новый чат на другом AI и импортируй её.");
+      buildMenu();
+    }
+    function importSessionTransfer() {
+      try {
+        chrome.storage.local.get("xwSessionTransfer", (r) => {
+          const value = r && typeof r.xwSessionTransfer === "string" ? r.xwSessionTransfer : "";
+          if (!value) { toast("Сохранённой сессии нет. Сначала нажми «Сохранить сессию» на другом сайте."); return; }
+          sessionTransfer = value.slice(0, 50000);
+          toast("Память импортирована. Теперь открой новый чат и запусти агента.");
+          buildMenu();
+        });
+      } catch { toast("Не удалось импортировать память сессии."); }
+    }
+    function clearSessionTransfer() {
+      sessionTransfer = "";
+      try { chrome.storage.local.remove("xwSessionTransfer"); } catch {}
+      toast("Перенесённая память очищена.");
+      buildMenu();
     }
 
     // ── Custom MCP servers (addons) ─────────────────────────────────────────
@@ -2795,6 +2856,12 @@
            <div class="zs-set-row"><button id="zs-set-save">Save</button><span id="zs-set-status"></span></div>
          </section>
          <section class="zs-menu-sec">
+           <div class="zs-sec-label"><span>Transfer session memory</span></div>
+           <div class="zs-menu-note">Save the visible conversation on this site, then open a new chat on another supported AI and import it before starting.</div>
+           <div class="zs-set-row"><button id="zs-session-export">Save session</button><button id="zs-session-import">Import session</button></div>
+           ${sessionTransfer ? `<div class="zs-menu-note zs-transfer-ready">Memory ready to use in a new chat. <button id="zs-session-clear" class="zs-link-btn">Clear</button></div>` : ""}
+         </section>
+         <section class="zs-menu-sec">
            <div class="zs-sec-label"><span>MCP servers</span></div>
            <div class="zs-menu-note">Roblox Studio is always connected (primary). Add another MCP server (e.g. Blender, Sketchfab) as an addon - the bridge restarts briefly to load it. Experimental.</div>
            ${mcpList}
@@ -2816,6 +2883,9 @@
         status.textContent = "Saved ✓";
         setTimeout(() => { status.textContent = ""; }, 1600);
       });
+      menuEl.querySelector("#zs-session-export")?.addEventListener("click", exportSessionTransfer);
+      menuEl.querySelector("#zs-session-import")?.addEventListener("click", importSessionTransfer);
+      menuEl.querySelector("#zs-session-clear")?.addEventListener("click", clearSessionTransfer);
       const mcpNameEl = menuEl.querySelector("#zs-mcp-name");
       const mcpUrlEl = menuEl.querySelector("#zs-mcp-url");
       const mcpStatus = menuEl.querySelector("#zs-mcp-status");
@@ -3120,7 +3190,7 @@
       // tone - which occurs both started-with-bridge-down and standby-with-bridge-
       // down - so it's tracked explicitly in the signature.)
       const showExtras = !!A.started;
-      const sig = [toneClass, indicator, msg, label, kind, disabled, warn, busy, showExtras].join("|");
+      const sig = [toneClass, indicator, msg, label, kind, disabled, warn, busy, showExtras, activeRole].join("|");
       if (sig === lastBarSig) return;
       lastBarSig = sig;
       // Set the tone WITHOUT clobbering other classes (e.g. zs-bar-inline, which
@@ -3133,6 +3203,10 @@
       actionBtn.textContent = label;
       actionBtn.dataset.kind = kind;
       actionBtn.disabled = disabled;
+      if (roleSelect) {
+        roleSelect.value = ZS.DEFAULT_AGENT_ROLES[activeRole] ? activeRole : "default";
+        roleSelect.disabled = A.started || A.starting;
+      }
       // The Stop button replaces the action button while the agent is busy.
       // With no kind (e.g. agent active, or an existing chat) there's no primary
       // action to offer, so the button is hidden entirely.
