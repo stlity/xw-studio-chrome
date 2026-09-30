@@ -145,7 +145,13 @@ def main() -> int:
         return 1
     sys.stderr.write(f"launch_studio_mcp: using {exe}\n")
     sys.stderr.flush()
-    proc = subprocess.Popen([str(exe)] + sys.argv[1:])
+    kwargs = {}
+    if sys.platform == "win32":
+        # StudioMCP is a console executable. Without this flag Windows opens
+        # a second black console window over Roblox Studio. Keep its inherited
+        # stdio pipes for MCP, but suppress the separate console window.
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    proc = subprocess.Popen([str(exe)] + sys.argv[1:], **kwargs)
     try:
         return proc.wait()
     except KeyboardInterrupt:

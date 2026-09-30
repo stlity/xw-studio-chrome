@@ -2,25 +2,23 @@
 
 All notable changes to XW Studio for Chrome are documented here.
 
-## [1.1] - 2026-09-29
+## [1.2] - 2026-09-30
 
 ### Added
-- **PyQt5 desktop launcher for Windows.** `launcher.py` replaces the legacy batch launcher with a graphical control center containing Dashboard, Console and Settings tabs, target selection, Start/Stop controls, port configuration and a live console at the bottom of the window.
+- **Text launcher for Windows, macOS and Linux.** `launcher.py` replaces the PyQt5 window and the legacy batch launcher with a single interactive console. It has target selection, status, log, restart, mode and quit commands, with bridge output in the same terminal.
 - **Unified target selection.** Choose Roblox Studio, Godot Engine or Local Terminal before starting the bridge; the selected mode is passed to `bridge.py` through environment variables.
-- **Godot project picker.** The launcher validates that the selected folder contains `project.godot` and passes it safely to Godot mode.
-- **Launcher dependency manifest.** `requirements-launcher.txt` documents the PyQt5 dependency.
+- **Godot project picker.** The text launcher validates that the selected folder contains `project.godot` and passes it safely to Godot mode.
 
 ### Fixed
-- **Windows Qt plugin discovery.** The launcher now locates PyQt5's bundled `qwindows.dll` through `PyQt5.__file__` and Qt library paths instead of relying on `QLibraryInfo` alone.
-- **Cyrillic Windows user paths.** Qt paths remain valid for Windows profiles whose names contain Cyrillic characters, such as `C:\\Users\\щд`.
-- **Corrupt PyQt5 installations.** A missing Qt DLL produces a clear repair instruction and an import failure triggers a no-cache PyQt5 reinstall attempt.
+- **Roblox MCP console window.** `StudioMCP.exe` now starts with `CREATE_NO_WINDOW`, so it keeps its MCP stdio pipes without opening a second black console over Roblox Studio.
+- **Roblox MCP attach flow.** The bridge still owns the MCP stdio handshake while the helper process is hidden, so Roblox Studio remains the only visible application window.
 - **Godot validation command.** Headless scene checks now run the selected scene directly with the dummy audio driver.
 - **Documentation drift.** README, extension instructions and user-facing offline messages now refer to `launcher.py`, not the removed batch launcher.
 
 ### Changed
-- Extension and bridge version are now synchronized at `1.1`.
+- Extension and bridge version are now synchronized at `1.2`.
 - The extension manifest description covers Roblox Studio, Godot Engine and local Terminal.
-- The bridge startup client identifies itself as `xwstudio-bridge` version `1.1`.
+- The bridge startup client identifies itself as `xwstudio-bridge` version `1.2`.
 
 
 

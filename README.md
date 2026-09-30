@@ -4,13 +4,13 @@
 **XW Studio** is a free browser extension that turns supported AI chats into a Roblox Studio, Godot Engine or local Terminal agent.
 Use the popup to switch between Roblox, Godot and Terminal modes. Godot mode can inspect a selected project, read and write GDScript/scenes/resources, validate the project headlessly and run bounded scene checks through the bridge. No API key is required.
 
-## XW Studio 1.1 — multi-agent settings and desktop launcher
+## XW Studio 1.2 — multi-agent settings and text launcher
 
 Click **Settings** in the extension popup to open a dedicated tab. Enable the team, choose a workflow and safety mode, then assign any supported AI to six roles: **Designer, Builder, Debugger, Security reviewer, QA tester, and Producer / architect**. The profile is stored locally and added to the active chat's system prompt. Plan preview and automatic Output-driven debugging are opt-in controls in the same page.
 
 The current release provides role-aware orchestration instructions and safe planning in the active chat. It does not silently open or control several AI tabs at once; cross-tab execution remains a later stage so each external site keeps its own login and consent boundary.
 
-The Windows release now includes a PyQt5 desktop launcher with Dashboard, Console and Settings tabs. It lets you select Roblox Studio, Godot Engine or Local Terminal before starting the bridge. Qt plugin paths are resolved safely even when the Windows user profile contains Cyrillic characters.
+The Windows release includes a text-based Python launcher. It lets you select Roblox Studio, Godot Engine or Local Terminal, shows bridge output in the same console, and provides status, log, restart and mode commands. It requires no PyQt5 and hides the separate StudioMCP console window.
 
 Supported AI providers include **DeepSeek** (recommended), **ChatGPT**, **Google Gemini**, **Kimi**, **GLM**, **Qwen**, **Arena**, **Meta AI**, **Microsoft Copilot**, **HuggingChat**, **Mistral**, **Claude**, **Grok**, **Perplexity** and **Duck.ai**. On ChatGPT, screenshots and image input are turned off on purpose: the free tier limits files and images on a separate quota from messages, so vision would only work part of the day. Gemini and Kimi can be unstable: Gemini tends to stop using the Roblox tools in long sessions, and Kimi sometimes uses its own native tools instead of the Roblox commands. On Arena, use **Direct** mode (XW Studio only supports Direct; it blocks Start in Battle / Side-by-Side / Agent modes). DeepSeek is the recommended provider.
 
@@ -59,12 +59,12 @@ Open Studio and load a Place, then enable MCP (first time only):
 
 ### 3. Choose a target and run the Bridge
 
-On Windows, run `launcher.py`. In the PyQt5 window choose **Roblox Studio**, **Godot Engine** or **Local Terminal**, then click **Start bridge**. The target can also be changed later in the extension popup.
+On Windows, run `launcher.py` and choose **Roblox Studio**, **Godot Engine** or **Local Terminal** in the text menu. The launcher keeps bridge output and commands in the same console.
 
-- **Windows:** run `python launcher.py` inside the extracted folder. If `.py` files are associated with Python, double-clicking `launcher.py` works too. The launcher installs PyQt5 for the current user when needed.
+- **Windows:** run `python launcher.py` inside the extracted folder. Do not use IDLE; use Command Prompt or Windows Terminal. No PyQt5 installation is required.
 - **macOS:** double-click `MacOS_Start.command` inside the extracted folder. The first time, macOS will show a security warning ("could not verify... free of malware") - this is normal for any script downloaded outside the App Store, click **Done**, then go to **System Settings > Privacy & Security**, scroll to the bottom, and click **Open Anyway**. You only need to do this once.
 
-A small window opens, that means the Bridge is running.
+The same console shows the bridge output. Keep it open or minimize it while using the extension.
 
 For Godot mode, open the XW Studio popup, choose **Godot**, press **Обзор**, and select the folder containing `project.godot`. The bridge uses the installed `godot`, `godot4` or `Godot` executable; set `XW_GODOT_BIN` if it is not on PATH.
 
@@ -89,7 +89,7 @@ Go to a supported site such as https://chat.deepseek.com (recommended), https://
 - Control play-testing
 - **Remember your project across sessions** persistent project memory saved inside your place
 
-## Provider compatibility notes from previous releases
+## Provider compatibility notes
 
 - **DeepSeek: the agent starts again on the new unified model.** DeepSeek merged Instant, Expert and Vision into one model and removed the model picker, which left "Start Roblox agent" stuck on "DeepSeek mode not ready". XW Studio now recognises the new chat box, switches Search off and starts, with DeepThink left on.
 - **DeepSeek: screenshots work on every chat.** Images no longer need the Vision tab (it is gone) - the unified model sees your Studio captures, one at a time or several in a row.

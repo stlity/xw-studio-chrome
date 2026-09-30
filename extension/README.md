@@ -1,6 +1,6 @@
 # XW Studio for Chrome - Roblox, Godot and Terminal AI Agent
 
-Control Roblox Studio, a Godot Engine project or your local Terminal with AI, for free. XW Studio turns a normal AI chat into an agent that can build and script your Roblox game, inspect/edit Godot project files and scenes, validate/run bounded Godot tests, or use local terminal tools. Choose the target in the popup; on Windows, `launcher.py` provides a PyQt5 window with mode selection, settings, tabs and a live console. No API key is required.
+Control Roblox Studio, a Godot Engine project or your local Terminal with AI, for free. XW Studio turns a normal AI chat into an agent that can build and script your Roblox game, inspect/edit Godot project files and scenes, validate/run bounded Godot tests, or use local terminal tools. Choose the target in the popup; on Windows, `launcher.py` provides a text menu with mode selection, status, logs and restart commands. No API key is required.
 
 It's a Chrome/Edge browser extension plus a small local bridge. It connects supported chats to Roblox Studio through the official MCP server, to a selected Godot project through the Godot CLI, or to local Terminal mode. **DeepSeek is the recommended provider.** ChatGPT, Gemini, Kimi, GLM, Qwen, Arena, Meta AI, Copilot, HuggingChat, Mistral, Claude, Grok, Perplexity and Duck.ai also work. On ChatGPT, screenshots and image input are disabled on purpose (its free tier caps files/images on a separate quota from messages, so vision would only work part of the day); ChatGPT also summarises its own context in long sessions, so XW Studio re-states its operating instructions periodically, shown as a "Reminder" chip. Gemini and Kimi can be less stable. On Arena, keep the mode dropdown on **Direct** (XW Studio only supports Direct mode).
 
@@ -15,7 +15,7 @@ It's a Chrome/Edge browser extension plus a small local bridge. It connects supp
 
 **Then set up the Bridge:**
 1. **Download the Bridge** from the [XW Studio repository](https://github.com/stlity/xw-studio-chrome)
-2. **Run the Bridge** - run `python launcher.py` (Windows), choose Roblox, Godot or Terminal in the PyQt5 window and click **Start bridge**. The same target can be changed later in the extension popup. In Godot mode choose the folder containing `project.godot` with **Browse**. On macOS, run `MacOS_Start.command`.
+2. **Run the Bridge** - run `python launcher.py` (Windows), choose Roblox, Godot or Terminal in the text menu and keep that console open. The same target can be changed later in the extension popup. In Godot mode choose the folder containing `project.godot` with **Browse**. On macOS, run `MacOS_Start.command`.
 3. For Roblox mode, **open Roblox Studio**, load a Place and enable MCP: click **Assistant AI** > **...** > **Manage MCP Servers** > **Enable Studio as MCP Server**.
 5. **Go to https://chat.deepseek.com** (recommended), https://chatgpt.com, https://gemini.google.com, https://www.kimi.ai, https://chat.z.ai, https://chat.qwen.ai, https://arena.ai, https://claude.ai, https://grok.com, https://www.perplexity.ai, https://duck.ai, or https://www.meta.ai, open a new chat (only works on these exact addresses; on Arena use Direct mode)
 6. Click **Start session** in the XW Studio panel
