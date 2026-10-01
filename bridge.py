@@ -95,7 +95,7 @@ def _enable_ansi_colors():
 HOST = "127.0.0.1"
 # Keep in sync with extension/manifest.json "version" - printed at
 # startup so a user's terminal output alone tells us which build they're on.
-BRIDGE_VERSION = "1.4"
+BRIDGE_VERSION = "1.5"
 PORT = int(os.environ.get("ZS_BRIDGE_PORT", "17613"))
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
@@ -471,13 +471,13 @@ def _roblox_studio_app_running():
         return None
     try:
         out = _run_hidden(
-            ["tasklist", "/FI", "IMAGENAME eq RobloxStudioBeta.exe"],
+            ["tasklist", "/FO", "CSV", "/NH"],
             capture_output=True, text=True, encoding="utf-8", errors="replace",
             timeout=8,
         ).stdout
     except Exception:
         return None
-    return "RobloxStudioBeta.exe" in out
+    return any(name.lower() in out.lower() for name in ("RobloxStudioBeta.exe", "RobloxStudio.exe"))
 
 
 def _kill_orphan_studio_mcp():
@@ -1048,7 +1048,7 @@ class MCPClient:
                 self._request("initialize", {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {},
-                    "clientInfo": {"name": "xwstudio-bridge", "version": "1.3"},
+                    "clientInfo": {"name": "xwstudio-bridge", "version": "1.5"},
                 }, timeout=30)
                 self._notify("notifications/initialized")
                 # Some MCP servers (notably Roblox's StudioMCP) advertise 0 tools at

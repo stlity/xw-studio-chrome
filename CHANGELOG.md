@@ -2,6 +2,15 @@
 
 All notable changes to XW Studio for Chrome are documented here.
 
+## [1.5] - 2026-10-01
+
+### Fixed
+- **Roblox Studio detection.** The bridge now recognises both `RobloxStudioBeta.exe` and the current `RobloxStudio.exe` process, preventing it from treating an open Studio as closed and cleaning up its active MCP proxy.
+- **MCP diagnostics.** Windows process checks remain hidden and use CSV tasklist output for reliable matching.
+
+### Changed
+- Extension, bridge and launcher versions are synchronized at `1.5`.
+
 ## [1.4] - 2026-10-01
 
 ### Fixed
