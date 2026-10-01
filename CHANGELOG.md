@@ -2,6 +2,15 @@
 
 All notable changes to XW Studio for Chrome are documented here.
 
+## [1.4] - 2026-10-01
+
+### Fixed
+- **Windows helper windows.** PowerShell, `cmd.exe`, `tasklist`, `netstat` and other bridge subprocesses now use `CREATE_NO_WINDOW`; starting from IDLE or Explorer no longer opens an extra PowerShell/console window.
+- **Hidden bridge children.** MCP, restart and Godot/Terminal helper processes inherit the same hidden-process policy while their captured output remains available in the main launcher console.
+
+### Changed
+- Extension, bridge and launcher versions are synchronized at `1.4`.
+
 ## [1.3] - 2026-09-30
 
 ### Added

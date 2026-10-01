@@ -30,6 +30,24 @@ import threading
 import time
 from pathlib import Path
 
+
+def _windows_hidden_kwargs():
+    """Prevent helper consoles when bridge is started from IDLE or Explorer."""
+    if sys.platform != "win32":
+        return {}
+    flags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    return {"creationflags": flags} if flags else {}
+
+
+def _run_hidden(*args, **kwargs):
+    """Run a captured Windows diagnostic/command process without a new window."""
+    if sys.platform == "win32":
+        flags = _windows_hidden_kwargs().get("creationflags")
+        if flags:
+            kwargs.setdefault("creationflags", flags)
+    return subprocess.run(*args, **kwargs)
+
+
 try:
     # Sibling script (same folder as bridge.py, which Python puts on sys.path
     # automatically) - reused here purely to detect a Studio version bump
@@ -77,7 +95,7 @@ def _enable_ansi_colors():
 HOST = "127.0.0.1"
 # Keep in sync with extension/manifest.json "version" - printed at
 # startup so a user's terminal output alone tells us which build they're on.
-BRIDGE_VERSION = "1.3"
+BRIDGE_VERSION = "1.4"
 PORT = int(os.environ.get("ZS_BRIDGE_PORT", "17613"))
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
@@ -190,7 +208,7 @@ def _godot_call(name, args, timeout):
         timeout_s = min(timeout_s, seconds + 15)
     else:
         raise RuntimeError(f"unknown Godot tool '{name}'")
-    completed = subprocess.run(command, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout_s)
+    completed = _run_hidden(command, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout_s)
     out = (completed.stdout or "") + ("\n[stderr]\n" + completed.stderr if completed.stderr else "")
     return f"exit_code: {completed.returncode}\nproject: {root}\n{out}"[-300000:]
 
@@ -229,7 +247,7 @@ def _terminal_call(name, args, timeout):
             shell_command = [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c", command]
         else:
             shell_command = ["/bin/sh", "-lc", command]
-        completed = subprocess.run(shell_command, cwd=cwd, shell=False, capture_output=True,
+        completed = _run_hidden(shell_command, cwd=cwd, shell=False, capture_output=True,
                                    text=True, encoding="utf-8", errors="replace", timeout=limit)
         out = (completed.stdout or "") + ("\n[stderr]\n" + completed.stderr if completed.stderr else "")
         return f"exit_code: {completed.returncode}\ncwd: {cwd}\n{out}"[-200000:]
@@ -407,7 +425,7 @@ def _port_owner(port):
     out = ""
     for proto in ("TCP", "TCPv6"):
         try:
-            out += subprocess.run(
+            out += _run_hidden(
                 ["netstat", "-ano", "-p", proto],
                 capture_output=True, text=True, encoding="utf-8", errors="replace",
                 timeout=8,
@@ -430,7 +448,7 @@ def _port_owner(port):
         return None
     name, path = "?", ""
     try:
-        ps = subprocess.run(
+        ps = _run_hidden(
             ["powershell", "-NoProfile", "-Command",
              f"$p=Get-Process -Id {pid} -ErrorAction SilentlyContinue; "
              f"if($p){{$p.Name; $p.Path}}"],
@@ -452,7 +470,7 @@ def _roblox_studio_app_running():
     if sys.platform != "win32":
         return None
     try:
-        out = subprocess.run(
+        out = _run_hidden(
             ["tasklist", "/FI", "IMAGENAME eq RobloxStudioBeta.exe"],
             capture_output=True, text=True, encoding="utf-8", errors="replace",
             timeout=8,
@@ -488,7 +506,7 @@ def _kill_orphan_studio_mcp():
     if _roblox_studio_app_running() is not False:
         return
     try:
-        out = subprocess.run(
+        out = _run_hidden(
             ["tasklist", "/FI", "IMAGENAME eq StudioMCP.exe"],
             capture_output=True, text=True, encoding="utf-8", errors="replace",
             timeout=8,
@@ -500,7 +518,7 @@ def _kill_orphan_studio_mcp():
     log("Found leftover StudioMCP.exe process(es) with no Roblox Studio running - "
         "cleaning them up (known cause of a phantom 'Studio connected' state).", "yl")
     try:
-        subprocess.run(["taskkill", "/F", "/IM", "StudioMCP.exe"],
+        _run_hidden(["taskkill", "/F", "/IM", "StudioMCP.exe"],
                        capture_output=True, text=True, timeout=8)
     except Exception as e:
         log(f"could not clean up orphaned StudioMCP.exe: {e}", "rd")
@@ -512,7 +530,7 @@ def _descendant_pids(root_pid):
     if sys.platform != "win32":
         return None
     try:
-        out = subprocess.run(
+        out = _run_hidden(
             ["powershell", "-NoProfile", "-Command",
              "Get-CimInstance Win32_Process | ForEach-Object "
              "{ \"$($_.ProcessId) $($_.ParentProcessId)\" }"],
@@ -580,7 +598,7 @@ def _reclaim_studio_port(client):
         "bridge did NOT launch - a leftover from a previous session. Studio "
         "registered to it, so our proxy sees 0 tools.", "yl")
     try:
-        subprocess.run(["taskkill", "/F", "/PID", str(pid_i)],
+        _run_hidden(["taskkill", "/F", "/PID", str(pid_i)],
                        capture_output=True, text=True, timeout=8)
     except Exception as e:
         log(f"could not kill the leftover StudioMCP.exe: {e}", "rd")
@@ -599,7 +617,7 @@ def _process_cmdline(pid):
     if sys.platform != "win32":
         return ""
     try:
-        out = subprocess.run(
+        out = _run_hidden(
             ["powershell", "-NoProfile", "-Command",
              f"(Get-CimInstance Win32_Process -Filter \"ProcessId={pid}\" "
              f"-ErrorAction SilentlyContinue).CommandLine"],
@@ -650,7 +668,7 @@ def _reclaim_bridge_port():
     log(f"port {PORT} is held by a leftover XW Studio bridge (pid {pid_i}) from a "
         "previous session - killing it so this one can start.", "yl")
     try:
-        subprocess.run(["taskkill", "/F", "/PID", str(pid_i)],
+        _run_hidden(["taskkill", "/F", "/PID", str(pid_i)],
                        capture_output=True, text=True, timeout=8)
     except Exception as e:
         log(f"could not kill the leftover bridge (pid {pid_i}): {e}", "rd")
@@ -681,7 +699,7 @@ def _kill_port_squatter():
         log("    StudioMCP connected to it instead of Roblox Studio - that is why "
             "there are 0 tools.", "yl")
         try:
-            subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+            _run_hidden(["taskkill", "/F", "/PID", str(pid)],
                            capture_output=True, text=True, timeout=8)
         except Exception as e:
             log(f"could not kill '{name}': {e}", "rd")
@@ -704,7 +722,7 @@ def _kill_port_squatter():
     killed_name = None
     for img in ("ropilot-infra-helper.exe", "ropilot-infra.exe", "ropilot.exe"):
         try:
-            res = subprocess.run(["taskkill", "/F", "/IM", img],
+            res = _run_hidden(["taskkill", "/F", "/IM", img],
                                  capture_output=True, text=True, timeout=8)
         except Exception:
             continue
@@ -776,7 +794,7 @@ def check_studio_port():
         ans = ""
     if ans in ("y", "yes", "o", "oui"):
         try:
-            subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+            _run_hidden(["taskkill", "/F", "/PID", str(pid)],
                            capture_output=True, text=True, timeout=8)
             log(f"killed {name} (pid {pid}). Studio can use the port now.", "cy")
             # Tell the user the finishing step IMMEDIATELY, here, instead of only
@@ -901,7 +919,7 @@ def restart_self():
         # so the user still ends up with a running, up-to-date bridge.
         log(f"in-place restart failed ({e}); spawning a fresh bridge...", "rd")
         try:
-            subprocess.Popen([sys.executable] + argv, cwd=HERE)
+            subprocess.Popen([sys.executable] + argv, cwd=HERE, **_windows_hidden_kwargs())
         except Exception as e2:
             log(f"could not spawn a fresh bridge: {e2} - please restart it manually", "rd")
         os._exit(0)
@@ -999,6 +1017,7 @@ class MCPClient:
                         errors="replace",
                         cwd=HERE,
                         env=env,
+                        **_windows_hidden_kwargs(),
                     )
                 except FileNotFoundError:
                     # The OS couldn't find cmd[0] at all - this is a config
@@ -1073,7 +1092,7 @@ class MCPClient:
             # taskkill /T kills the whole tree.
             try:
                 if sys.platform == "win32":
-                    subprocess.run(
+                    _run_hidden(
                         ["taskkill", "/F", "/T", "/PID", str(self.proc.pid)],
                         capture_output=True, timeout=8,
                     )
