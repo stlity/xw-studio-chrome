@@ -95,7 +95,7 @@ def _enable_ansi_colors():
 HOST = "127.0.0.1"
 # Keep in sync with extension/manifest.json "version" - printed at
 # startup so a user's terminal output alone tells us which build they're on.
-BRIDGE_VERSION = "1.7"
+BRIDGE_VERSION = "1.8"
 PORT = int(os.environ.get("ZS_BRIDGE_PORT", "17613"))
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
@@ -1017,7 +1017,6 @@ class MCPClient:
                         errors="replace",
                         cwd=HERE,
                         env=env,
-                        **_windows_hidden_kwargs(),
                     )
                 except FileNotFoundError:
                     # The OS couldn't find cmd[0] at all - this is a config
@@ -1048,7 +1047,7 @@ class MCPClient:
                 self._request("initialize", {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {},
-                    "clientInfo": {"name": "xwstudio-bridge", "version": "1.7"},
+                    "clientInfo": {"name": "xwstudio-bridge", "version": "1.8"},
                 }, timeout=30)
                 self._notify("notifications/initialized")
                 # Some MCP servers (notably Roblox's StudioMCP) advertise 0 tools at

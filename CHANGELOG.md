@@ -2,6 +2,14 @@
 
 All notable changes to XW Studio for Chrome are documented here.
 
+## [1.8] - 2026-10-01
+
+### Fixed
+- **MCP wrapper startup on Windows.** The outer Python MCP wrapper no longer receives `CREATE_NO_WINDOW`, which caused `[Errno 22] Invalid argument` with Python 3.12 and piped stdio on some Windows installations. The inner Roblox `cmd.exe`/`mcp.bat` and diagnostic helpers remain hidden.
+
+### Changed
+- Extension, bridge and launcher versions are synchronized at `1.8`.
+
 ## [1.7] - 2026-10-01
 
 ### Fixed
