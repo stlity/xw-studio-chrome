@@ -2,6 +2,14 @@
 
 All notable changes to XW Studio for Chrome are documented here.
 
+## [1.9] - 2026-10-01
+
+### Fixed
+- **Roblox MCP with Cyrillic Windows profiles.** Roblox's generated `mcp.bat` can contain invalid batch syntax and close stdio immediately when the Windows username/path is non-ASCII. Windows now launches the paired, current `StudioMCP.exe` directly; the batch path remains only as a fallback.
+
+### Changed
+- Extension, bridge and launcher versions are synchronized at `1.9`.
+
 ## [1.8] - 2026-10-01
 
 ### Fixed

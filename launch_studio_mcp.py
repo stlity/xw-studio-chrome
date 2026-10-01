@@ -152,6 +152,22 @@ def _windows_mcp_command() -> Optional[list[str]]:
 
 
 def main() -> int:
+    # Roblox's generated mcp.bat is currently malformed on some Windows
+    # installs, especially when LOCALAPPDATA contains a non-ASCII username.
+    # Launch the paired StudioMCP.exe directly so cmd batch parsing cannot
+    # corrupt the stdio MCP stream. find_studio_mcp prefers a version folder
+    # that also contains the live RobloxStudio executable.
+    exe = find_studio_mcp()
+    if exe and sys.platform == "win32":
+        sys.stderr.write(f"launch_studio_mcp: using direct StudioMCP.exe {exe}\n")
+        sys.stderr.flush()
+        kwargs = {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+        proc = subprocess.Popen([str(exe)] + sys.argv[1:], **kwargs)
+        try:
+            return proc.wait()
+        except KeyboardInterrupt:
+            proc.terminate()
+            return proc.wait()
     official_command = _windows_mcp_command()
     if official_command:
         sys.stderr.write("launch_studio_mcp: using Roblox official mcp.bat\n")
