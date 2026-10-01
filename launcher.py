@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 BRIDGE = ROOT / "bridge.py"
 PORT = int(os.environ.get("ZS_BRIDGE_PORT", "17613"))
-VERSION = "1.5"
+VERSION = "1.6"
 
 
 def _windows_no_window_flags() -> int:

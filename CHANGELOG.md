@@ -2,6 +2,14 @@
 
 All notable changes to XW Studio for Chrome are documented here.
 
+## [1.6] - 2026-10-01
+
+### Fixed
+- **Roblox Studio MCP attach.** On Windows, XW Studio now launches Roblox's official `%LOCALAPPDATA%\\Roblox\\mcp.bat` through hidden `cmd.exe`, preserving Roblox's current MCP arguments and registration flow. Direct `StudioMCP.exe` discovery remains a fallback for installations without the batch file.
+
+### Changed
+- Extension, bridge and launcher versions are synchronized at `1.6`.
+
 ## [1.5] - 2026-10-01
 
 ### Fixed

@@ -134,7 +134,33 @@ def find_studio_mcp() -> Optional[Path]:
     return _find_studio_mcp_windows()
 
 
+def _windows_mcp_command() -> Optional[list[str]]:
+    """Use Roblox's official mcp.bat when present; it supplies current args."""
+    if sys.platform != "win32":
+        return None
+    local_appdata = os.environ.get("LOCALAPPDATA", "").strip()
+    if not local_appdata:
+        return None
+    batch = Path(local_appdata) / "Roblox" / "mcp.bat"
+    if not batch.is_file():
+        return None
+    comspec = os.environ.get("ComSpec", "cmd.exe")
+    # /d disables AutoRun hooks; /s preserves quoted paths with Unicode/spaces.
+    return [comspec, "/d", "/s", "/c", f'"{batch}"']
+
+
 def main() -> int:
+    official_command = _windows_mcp_command()
+    if official_command:
+        sys.stderr.write("launch_studio_mcp: using Roblox official mcp.bat\n")
+        sys.stderr.flush()
+        kwargs = {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+        proc = subprocess.Popen(official_command, **kwargs)
+        try:
+            return proc.wait()
+        except KeyboardInterrupt:
+            proc.terminate()
+            return proc.wait()
     exe = find_studio_mcp()
     binary_name = "StudioMCP" if sys.platform == "darwin" else "StudioMCP.exe"
     if not exe:
