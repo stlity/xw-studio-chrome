@@ -145,8 +145,10 @@ def _windows_mcp_command() -> Optional[list[str]]:
     if not batch.is_file():
         return None
     comspec = os.environ.get("ComSpec", "cmd.exe")
-    # /d disables AutoRun hooks; /s preserves quoted paths with Unicode/spaces.
-    return [comspec, "/d", "/s", "/c", f'"{batch}"']
+    # /d disables AutoRun hooks. CALL is important: it executes the batch file
+    # and returns control to this wrapper instead of making cmd treat the path
+    # as an invalid executable argument on some Windows/Python combinations.
+    return [comspec, "/d", "/c", "call", str(batch)]
 
 
 def main() -> int:
@@ -155,12 +157,16 @@ def main() -> int:
         sys.stderr.write("launch_studio_mcp: using Roblox official mcp.bat\n")
         sys.stderr.flush()
         kwargs = {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
-        proc = subprocess.Popen(official_command, **kwargs)
         try:
-            return proc.wait()
-        except KeyboardInterrupt:
-            proc.terminate()
-            return proc.wait()
+            proc = subprocess.Popen(official_command, **kwargs)
+            try:
+                return proc.wait()
+            except KeyboardInterrupt:
+                proc.terminate()
+                return proc.wait()
+        except OSError as exc:
+            sys.stderr.write(f"launch_studio_mcp: mcp.bat failed ({exc}); falling back to StudioMCP.exe\n")
+            sys.stderr.flush()
     exe = find_studio_mcp()
     binary_name = "StudioMCP" if sys.platform == "darwin" else "StudioMCP.exe"
     if not exe:

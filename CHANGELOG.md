@@ -2,6 +2,14 @@
 
 All notable changes to XW Studio for Chrome are documented here.
 
+## [1.7] - 2026-10-01
+
+### Fixed
+- **Windows mcp.bat launch.** Roblox's official batch file is now invoked as `cmd.exe /d /c call <path>`, avoiding `[Errno 22] Invalid argument` on Python 3.12/Windows. If the official command cannot be created, the wrapper falls back to the discovered `StudioMCP.exe`.
+
+### Changed
+- Extension, bridge and launcher versions are synchronized at `1.7`.
+
 ## [1.6] - 2026-10-01
 
 ### Fixed
